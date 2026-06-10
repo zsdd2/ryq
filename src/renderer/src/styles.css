@@ -105,8 +105,8 @@ button:disabled {
 
 .launcher-widget {
   position: relative;
-  width: 92px;
-  height: 92px;
+  width: 88px;
+  height: 88px;
   display: grid;
   align-items: center;
   justify-content: center;
@@ -132,8 +132,8 @@ button:disabled {
 }
 
 .launcher-hero-logo {
-  width: 86px;
-  height: 86px;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
   border-radius: 22px;
   filter:
@@ -367,9 +367,28 @@ button:disabled {
   line-height: 1.5;
 }
 
+.template-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.template-grid label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.template-grid span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 750;
+}
+
 .template-actions {
   display: grid;
-  grid-template-columns: 74px 1fr;
+  grid-template-columns: 74px 74px 1fr;
   gap: 8px;
 }
 
@@ -664,7 +683,7 @@ button:disabled {
 
 .rich-editor {
   flex: 1;
-  min-height: 220px;
+  min-height: 150px;
   overflow: auto;
   padding: 14px;
   outline: none;
@@ -672,6 +691,102 @@ button:disabled {
   white-space: normal;
   font-size: 14px;
   line-height: 1.55;
+}
+
+.timer-panel {
+  display: flex;
+  max-height: 210px;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+.timer-panel-header,
+.timer-item,
+.timer-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-panel-header {
+  justify-content: space-between;
+  color: var(--blue);
+}
+
+.timer-title {
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.timer-subtitle,
+.timer-empty,
+.timer-item span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.timer-list {
+  display: flex;
+  max-height: 74px;
+  flex-direction: column;
+  gap: 5px;
+  overflow: auto;
+}
+
+.timer-item {
+  justify-content: space-between;
+  border: 1px solid rgb(220 231 250);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 78%);
+  padding: 6px 7px;
+}
+
+.timer-item.fired {
+  background: rgb(245 247 252 / 78%);
+}
+
+.timer-item strong {
+  display: block;
+  font-size: 11px;
+}
+
+.timer-item button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: rgb(236 243 255);
+  color: var(--destructive);
+}
+
+.timer-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 156px 48px;
+}
+
+.timer-form input {
+  min-width: 0;
+  height: 30px;
+  border: 1px solid rgb(220 231 250);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  padding: 0 8px;
+  outline: none;
+  font-size: 11px;
+}
+
+.timer-form button {
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+  color: white;
+  font-size: 11px;
+  font-weight: 750;
 }
 
 .rich-editor:empty::before {

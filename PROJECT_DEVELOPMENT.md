@@ -289,6 +289,39 @@ Updated UI target:
 - Verified `dist/latest.yml` points to `renyiqian-setup-1.0.1.exe`.
 - Verified packaged updater config points to `zsdd2/ryq`.
 
+## Latest Verification - Update Install Flow Fix
+
+- Investigated the reported updater issue where the app found online version `1.1.2` but clicking `安装更新` did not complete installation.
+- Root cause: the renderer reused the same click handler for `检查更新` and `安装更新`; when the status was already `downloaded`, clicking the button started another update check instead of calling `quitAndInstallUpdate`.
+- Secondary cause of seeing `1.1.2`: GitHub Actions produced `v1.1.0`, `v1.1.1`, and `v1.1.2` before the version baseline stabilized, so `1.1.2` is the real online latest release, not a wrong repository.
+- Fixed the renderer update action so `downloaded` status directly triggers install.
+- Hardened the main update manager so a downloaded update is not overwritten by another check/download request.
+- Bumped the local package metadata to `1.1.3`, which is higher than the current online latest `1.1.2`.
+- `npm test` passed: 7 test files, 26 tests.
+- `npm run dist:win` passed and generated:
+  - `dist/renyiqian-setup-1.1.3.exe`
+  - `dist/renyiqian-setup-1.1.3.exe.blockmap`
+  - `dist/latest.yml`
+- Verified `dist/latest.yml` points to `renyiqian-setup-1.1.3.exe`.
+
+## Latest Verification - Launcher Click Region, Timers, And Template Columns
+
+- Reduced launcher mode window bounds from `96x96` to `88x88`.
+- Added native Electron window shape clipping in launcher mode so only the logo-sized area receives desktop clicks; panel mode resets to the full panel shape.
+- Added per-note timers stored inside the note JSON description.
+- A note can now have multiple timers, each with its own name, target time, and fired/scheduled status.
+- Renderer scans scheduled timers while the app is open and shows a reminder dialog when a timer reaches its target time.
+- Template builder now supports both row labels and column labels; `新增项目` adds rows and `新增列` adds columns before generating one editable table note.
+- Added regression coverage for multi-column template HTML and stored note timers.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 7 test files, 28 tests.
+  - `npm run dist:win`
+- Updated package output:
+  - `dist/renyiqian-setup-1.1.3.exe`
+  - `dist/renyiqian-setup-1.1.3.exe.blockmap`
+  - `dist/latest.yml`
+
 ## Environment Notes
 
 - Use the project-local Node runtime for this checkout:

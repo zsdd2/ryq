@@ -24,6 +24,7 @@ import {
 } from './database'
 import type { BoardDraft, CardDraft, CardMovePayload, ColumnDraft, ColumnMovePayload } from '../shared/types'
 import {
+  FLOATING_LAUNCHER_BOUNDS,
   createFloatingWindowOptions,
   getFloatingWindowBounds,
   getMovedWindowPosition,
@@ -236,6 +237,8 @@ function createMainWindow(): BrowserWindow {
     window.removeMenu()
   }
 
+  applyFloatingWindowShape(window, floatingState.mode)
+
   window.once('ready-to-show', () => {
     window.setMenuBarVisibility(false)
     window.show()
@@ -259,6 +262,26 @@ function createMainWindow(): BrowserWindow {
   return window
 }
 
+function applyFloatingWindowShape(window: BrowserWindow, mode: FloatingWindowMode): void {
+  if (typeof window.setShape !== 'function') {
+    return
+  }
+
+  if (mode === 'launcher') {
+    window.setShape([
+      {
+        x: 0,
+        y: 0,
+        width: FLOATING_LAUNCHER_BOUNDS.width,
+        height: FLOATING_LAUNCHER_BOUNDS.height
+      }
+    ])
+    return
+  }
+
+  window.setShape([])
+}
+
 function setFloatingWindowMode(mode: FloatingWindowMode): void {
   if (!mainWindow) {
     return
@@ -270,6 +293,7 @@ function setFloatingWindowMode(mode: FloatingWindowMode): void {
   mainWindow.setResizable(mode === 'panel')
   mainWindow.setAlwaysOnTop(true)
   mainWindow.setSize(bounds.width, bounds.height)
+  applyFloatingWindowShape(mainWindow, mode)
   setFloatingWindowState({
     mode,
     x,

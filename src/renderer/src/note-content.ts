@@ -6,12 +6,21 @@ interface StoredNoteDescription {
   version: number
   html: string
   pinned: boolean
+  timers?: NoteTimer[]
+}
+
+export interface NoteTimer {
+  id: string
+  name: string
+  dueAt: number
+  status: 'scheduled' | 'fired'
 }
 
 export interface NoteView extends CardRecord {
   html: string
   pinned: boolean
   summary: string
+  timers: NoteTimer[]
 }
 
 function isStoredNoteDescription(value: unknown): value is StoredNoteDescription {
@@ -46,10 +55,23 @@ export function escapeHtml(value: string): string {
 }
 
 export function buildNoteDescription({ html, pinned }: { html: string; pinned: boolean }): string {
+  return buildNoteDescriptionWithTimers({ html, pinned, timers: [] })
+}
+
+export function buildNoteDescriptionWithTimers({
+  html,
+  pinned,
+  timers
+}: {
+  html: string
+  pinned: boolean
+  timers: NoteTimer[]
+}): string {
   return JSON.stringify({
     version: NOTE_DESCRIPTION_VERSION,
     html,
-    pinned
+    pinned,
+    timers
   } satisfies StoredNoteDescription)
 }
 
@@ -62,7 +84,8 @@ export function createNoteView(card: CardRecord): NoteView {
         ...card,
         html: parsed.html,
         pinned: parsed.pinned,
-        summary: summary || card.title
+        summary: summary || card.title,
+        timers: normalizeTimers(parsed.timers)
       }
     }
   } catch {
@@ -75,6 +98,22 @@ export function createNoteView(card: CardRecord): NoteView {
     ...card,
     html,
     pinned: false,
-    summary: summary || card.title
+    summary: summary || card.title,
+    timers: []
   }
+}
+
+function normalizeTimers(value: unknown): NoteTimer[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((timer): timer is Partial<NoteTimer> => Boolean(timer) && typeof timer === 'object')
+    .map((timer) => ({
+      id: typeof timer.id === 'string' ? timer.id : crypto.randomUUID(),
+      name: typeof timer.name === 'string' && timer.name.trim() ? timer.name.trim() : '计时器',
+      dueAt: typeof timer.dueAt === 'number' ? timer.dueAt : Date.now(),
+      status: timer.status === 'fired' ? 'fired' : 'scheduled'
+    }))
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { appendTemplateRow, buildTemplateNoteHtml, normalizeTemplateRows } from './note-template'
+import {
+  appendTemplateColumn,
+  appendTemplateRow,
+  buildTemplateNoteHtml,
+  normalizeTemplateColumns,
+  normalizeTemplateRows
+} from './note-template'
 
 describe('note template helpers', () => {
   it('normalizes template rows from one label per line', () => {
@@ -17,6 +23,14 @@ describe('note template helpers', () => {
   it('turns one reusable template into one editable table note', () => {
     expect(buildTemplateNoteHtml('客户\n电话')).toBe(
       '<table class="note-template-table"><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><th scope="row">客户</th><td><br></td></tr><tr><th scope="row">电话</th><td><br></td></tr></tbody></table>'
+    )
+  })
+
+  it('supports adding table columns to a generated template note', () => {
+    expect(normalizeTemplateColumns('内容\n结果')).toEqual(['内容', '结果'])
+    expect(appendTemplateColumn('内容')).toBe('内容\n新列')
+    expect(buildTemplateNoteHtml('客户', '内容\n结果')).toBe(
+      '<table class="note-template-table"><thead><tr><th>项目</th><th>内容</th><th>结果</th></tr></thead><tbody><tr><th scope="row">客户</th><td><br></td><td><br></td></tr></tbody></table>'
     )
   })
 

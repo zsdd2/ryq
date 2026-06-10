@@ -107,6 +107,10 @@ export class UpdateManager {
       return this.getStatus()
     }
 
+    if (this.status.phase === 'downloaded') {
+      return this.getStatus()
+    }
+
     try {
       this.status = {
         ...this.status,
@@ -126,6 +130,10 @@ export class UpdateManager {
   }
 
   async downloadUpdate(): Promise<UpdateStatus> {
+    if (this.status.phase === 'downloaded') {
+      return this.getStatus()
+    }
+
     if (!this.supported || !this.status.availableUpdate) {
       return this.getStatus()
     }

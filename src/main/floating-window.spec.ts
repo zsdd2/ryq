@@ -8,8 +8,8 @@ describe('createFloatingWindowOptions', () => {
       preloadPath: 'preload.js'
     })
 
-    expect(options.width).toBe(96)
-    expect(options.height).toBe(96)
+    expect(options.width).toBe(88)
+    expect(options.height).toBe(88)
     expect(options.minWidth).toBeLessThanOrEqual(320)
     expect(options.minHeight).toBeLessThanOrEqual(360)
     expect(options.frame).toBe(false)

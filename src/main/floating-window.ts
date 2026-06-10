@@ -9,8 +9,8 @@ export interface FloatingWindowOptionsInput {
 }
 
 export const FLOATING_LAUNCHER_BOUNDS = {
-  width: 96,
-  height: 96
+  width: 88,
+  height: 88
 } as const
 
 export const FLOATING_PANEL_BOUNDS = {
