@@ -1,7 +1,34 @@
 import { escapeHtml } from './note-content'
 
+export interface NoteTemplateDefinition {
+  id: string
+  name: string
+  description: string
+  rows: string[]
+  columns: string[]
+}
+
 const DEFAULT_TEMPLATE_ROWS = ['客户', '电话', '事项', '备注']
 const DEFAULT_TEMPLATE_COLUMNS = ['内容']
+
+export function getDefaultNoteTemplates(): NoteTemplateDefinition[] {
+  return [
+    {
+      id: 'custom-table',
+      name: '表格模板',
+      description: '自定义行和列，生成一条可填写的表格便签',
+      rows: DEFAULT_TEMPLATE_ROWS,
+      columns: DEFAULT_TEMPLATE_COLUMNS
+    },
+    {
+      id: 'account-membership',
+      name: '账号会员管理',
+      description: '记录平台账号、会员到期和续费信息',
+      rows: ['平台', '账号', '密码', '绑定邮箱', '会员类型', '会员到期', '续费金额', '备注'],
+      columns: ['内容']
+    }
+  ]
+}
 
 export function normalizeTemplateRows(value: string): string[] {
   const rows = value

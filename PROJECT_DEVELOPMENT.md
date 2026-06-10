@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.2.2 for a remote update that preserves existing local notes across reinstall/update paths and keeps the collapsed floating launcher visible after the panel is reduced.
+Prepare 任意签 1.2.3 with tighter note cards, group management, card-level countdown visibility, direct pinning, quieter tooltip-style notices, and reusable template-note choices.
 
 ## Current Status
 
@@ -38,6 +38,10 @@ Prepare 任意签 1.2.2 for a remote update that preserves existing local notes 
 | GitHub push | Done | `main` was pushed to `https://github.com/zsdd2/ryq`; `v1.0.0` tag was pushed as the first 任意签 release baseline. |
 | Stable local storage | Implemented | Windows packaged builds now pin `userData` to `%APPDATA%/renyiqian` and migrate legacy `%APPDATA%/任意签` / `%APPDATA%/Stickban` databases only when the canonical database is still pristine. |
 | Collapse visibility | Implemented | Panel-to-launcher collapse now restores/shows/raises the BrowserWindow and recenters the 88x88 launcher around the previous panel center. |
+| Card preview clamp | Implemented | Note cards now clamp rich previews to two visible lines; full content remains available in the detail dialog. |
+| Group management | Implemented | Sidebar groups now expose rename and delete actions using the existing board update/delete IPC. |
+| Countdown cards | Implemented | Each note card shows compact countdown rows on the right, with four-character names and one-unit remaining/overdue time. |
+| Template choices | Implemented | Template panel now supports multiple reusable templates and includes an account membership management template alongside the custom table template. |
 
 ## Scope Boundary
 
@@ -348,6 +352,21 @@ Updated UI target:
 - Verification passed:
   - `npm run typecheck`
   - `npm test` passed: 8 test files, 31 tests.
+
+## Latest Verification - Card Timers, Groups, And Templates
+
+- Fixed long note previews by clamping card preview content to two lines so text no longer overflows card boundaries.
+- Added group rename and delete controls to the left sidebar.
+- Added compact countdown rows to note cards. Timer labels use the first four visible characters, and remaining time shows one unit only: days, hours, or minutes, with `超` for overdue timers.
+- Added direct card-level pin toggling without opening the note detail dialog.
+- Changed note detail save so saving closes the detail dialog.
+- Replaced interruptive timer alerts and full-width status banners with a small hoverable alert icon.
+- Added recurring timer support for single, daily, weekly, and monthly timers; adding a timer also inserts a small timer marker into the rich text body.
+- Changed the template panel into a reusable template selector. It now includes the existing custom table template and a new account membership management template, and closes automatically after generating a template note.
+- Bumped package metadata to `1.2.3` for the next remote update.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 8 test files, 35 tests.
 
 ## Environment Notes
 

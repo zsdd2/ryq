@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildNoteDescription, buildNoteDescriptionWithTimers, createNoteView, getSummaryFromHtml } from './note-content'
+import {
+  buildNoteDescription,
+  buildNoteDescriptionWithTimers,
+  createNoteView,
+  formatTimerRemaining,
+  getCompactTimerName,
+  getSummaryFromHtml,
+  resolveTimerDueAt
+} from './note-content'
 
 describe('note content helpers', () => {
   it('turns legacy cards into note views with wrapped html content', () => {
@@ -77,5 +85,28 @@ describe('note content helpers', () => {
       name: 'First reminder',
       status: 'scheduled'
     })
+  })
+
+  it('formats note timers as one compact value and unit', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+
+    expect(formatTimerRemaining(now + 3 * 24 * 60 * 60 * 1000, now)).toBe('3天')
+    expect(formatTimerRemaining(now + 5 * 60 * 60 * 1000, now)).toBe('5小时')
+    expect(formatTimerRemaining(now + 35 * 60 * 1000, now)).toBe('35分')
+    expect(formatTimerRemaining(now - 2 * 60 * 60 * 1000, now)).toBe('超2小时')
+  })
+
+  it('uses only the first four visible characters for timer card labels', () => {
+    expect(getCompactTimerName('浏览器账号会员')).toBe('浏览器账')
+    expect(getCompactTimerName('API')).toBe('API')
+  })
+
+  it('resolves recurring timers to their next visible due date', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+    const yesterday = new Date('2026-06-09T07:30:00.000Z').getTime()
+
+    expect(resolveTimerDueAt({ id: 't1', name: 'daily', dueAt: yesterday, status: 'scheduled', repeat: 'daily' }, now)).toBe(
+      new Date('2026-06-11T07:30:00.000Z').getTime()
+    )
   })
 })

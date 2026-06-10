@@ -3,6 +3,7 @@ import {
   appendTemplateColumn,
   appendTemplateRow,
   buildTemplateNoteHtml,
+  getDefaultNoteTemplates,
   normalizeTemplateColumns,
   normalizeTemplateRows
 } from './note-template'
@@ -36,5 +37,15 @@ describe('note template helpers', () => {
 
   it('escapes template row labels before creating table html', () => {
     expect(buildTemplateNoteHtml('金额<100>')).toContain('金额&lt;100&gt;')
+  })
+
+  it('provides an account membership template as a reusable template option', () => {
+    const templates = getDefaultNoteTemplates()
+    const accountTemplate = templates.find((template) => template.id === 'account-membership')
+
+    expect(accountTemplate).toBeDefined()
+    expect(accountTemplate?.rows).toContain('平台')
+    expect(accountTemplate?.rows).toContain('会员到期')
+    expect(buildTemplateNoteHtml(accountTemplate!.rows.join('\n'), accountTemplate!.columns.join('\n'))).toContain('会员到期')
   })
 })

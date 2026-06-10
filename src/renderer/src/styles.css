@@ -386,6 +386,41 @@ button:disabled {
   font-weight: 750;
 }
 
+.template-choice-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.template-choice {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid rgb(220 231 250);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 80%);
+  padding: 8px 9px;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.template-choice strong {
+  font-size: 12px;
+}
+
+.template-choice span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.template-choice.active {
+  border-color: rgb(144 177 255);
+  background: linear-gradient(135deg, rgb(236 245 255), rgb(248 242 255));
+  box-shadow: inset 0 0 0 1px rgb(190 209 255 / 68%);
+}
+
 .template-actions {
   display: grid;
   grid-template-columns: 74px 74px 1fr;
@@ -402,6 +437,21 @@ button:disabled {
 .status-error {
   background: color-mix(in oklab, var(--destructive) 12%, white 88%);
   color: var(--destructive);
+}
+
+.status-indicator {
+  position: absolute;
+  top: 68px;
+  right: 14px;
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--destructive) 14%, white 86%);
+  color: var(--destructive);
+  box-shadow: 0 8px 18px rgb(190 45 45 / 18%);
 }
 
 .note-workspace {
@@ -433,20 +483,31 @@ button:disabled {
 }
 
 .group-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
   width: 100%;
   min-height: 30px;
   border-radius: 10px;
   background: transparent;
-  padding: 0 8px;
+  padding: 0 4px 0 8px;
   color: var(--muted-foreground);
   text-align: left;
 }
 
-.group-item span {
+.group-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.group-main span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,9 +516,34 @@ button:disabled {
   font-weight: 650;
 }
 
-.group-item small {
+.group-main small {
   color: inherit;
   font-size: 10px;
+}
+
+.group-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.group-item:hover .group-actions,
+.group-item.active .group-actions {
+  opacity: 1;
+}
+
+.group-actions button {
+  width: 20px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+.group-actions button:hover {
+  background: rgb(225 237 255);
 }
 
 .group-item.active,
@@ -503,7 +589,7 @@ button:disabled {
 
 .note-card {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 24px;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(86px, 120px) 24px;
   align-items: start;
   gap: 7px;
   min-height: 54px;
@@ -563,10 +649,13 @@ button:disabled {
 
 .note-preview {
   min-width: 0;
-  max-height: 96px;
+  display: -webkit-box;
+  max-height: calc(1.45em * 2);
   overflow: hidden;
   overflow-wrap: anywhere;
   white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: 13px;
   line-height: 1.45;
 }
@@ -578,6 +667,44 @@ button:disabled {
 .note-preview :where(ul, ol),
 .rich-editor :where(ul, ol) {
   padding-left: 18px;
+}
+
+.note-timer-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.note-timer-stack.empty {
+  min-height: 1px;
+}
+
+.note-timer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 20px;
+  border-radius: 7px;
+  background: rgb(237 244 255 / 78%);
+  padding: 2px 6px;
+  color: var(--blue);
+}
+
+.note-timer-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.note-timer-row strong {
+  font-size: 10px;
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .note-template-table {
@@ -766,10 +893,11 @@ button:disabled {
 
 .timer-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 156px 48px;
+  grid-template-columns: minmax(0, 1fr) 156px 70px 48px;
 }
 
-.timer-form input {
+.timer-form input,
+.timer-form select {
   min-width: 0;
   height: 30px;
   border: 1px solid rgb(220 231 250);
@@ -800,6 +928,17 @@ button:disabled {
   border-bottom: 1px dashed var(--blue);
   color: transparent;
   vertical-align: baseline;
+}
+
+.note-inline-timer {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgb(236 243 255);
+  padding: 2px 8px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .note-dialog-actions {

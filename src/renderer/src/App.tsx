@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import {
+  AlertCircle,
   AlarmClock,
   Bold,
   ChevronDown,
@@ -7,6 +8,7 @@ import {
   Italic,
   List,
   ListOrdered,
+  Pencil,
   Pin,
   PinOff,
   Plus,
@@ -22,7 +24,11 @@ import {
   buildNoteDescriptionWithTimers,
   createNoteView,
   escapeHtml,
+  formatTimerRemaining,
+  getCompactTimerName,
   getSummaryFromHtml,
+  resolveTimerDueAt,
+  type NoteTimerRepeat,
   type NoteTimer,
   type NoteView
 } from './note-content'
@@ -30,15 +36,18 @@ import {
   appendTemplateColumn,
   appendTemplateRow,
   buildTemplateNoteHtml,
+  getDefaultNoteTemplates,
   normalizeTemplateColumns,
   normalizeTemplateRows
 } from './note-template'
 
 const TEMPLATE_STORAGE_KEY = 'renyiqian.noteTemplateText'
 const TEMPLATE_COLUMNS_STORAGE_KEY = 'renyiqian.noteTemplateColumnsText'
+const TEMPLATE_SELECTED_STORAGE_KEY = 'renyiqian.selectedTemplateId'
 const DEFAULT_TEMPLATE_TEXT = '客户\n电话\n事项\n备注'
 const DEFAULT_TEMPLATE_COLUMNS_TEXT = '内容'
 const LAUNCHER_DRAG_HOLD_MS = 220
+const DEFAULT_NOTE_TEMPLATES = getDefaultNoteTemplates()
 
 function App(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
@@ -53,8 +62,11 @@ function App(): JSX.Element {
   const [showTemplatePanel, setShowTemplatePanel] = useState(false)
   const [templateText, setTemplateText] = useState(DEFAULT_TEMPLATE_TEXT)
   const [templateColumnsText, setTemplateColumnsText] = useState(DEFAULT_TEMPLATE_COLUMNS_TEXT)
+  const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_NOTE_TEMPLATES[0]?.id ?? 'custom-table')
   const [timerName, setTimerName] = useState('')
   const [timerDueAt, setTimerDueAt] = useState('')
+  const [timerRepeat, setTimerRepeat] = useState<NoteTimerRepeat>('none')
+  const [timerNow, setTimerNow] = useState(() => Date.now())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -95,6 +107,30 @@ function App(): JSX.Element {
   }, [searchResults])
 
   const visibleNotes = trimmedSearchQuery ? searchNotes : notes
+  const selectedTemplate =
+    DEFAULT_NOTE_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? DEFAULT_NOTE_TEMPLATES[0]
+
+  function getTemplateRowsText(): string {
+    return selectedTemplate?.id === 'custom-table' ? templateText : selectedTemplate?.rows.join('\n') ?? templateText
+  }
+
+  function getTemplateColumnsText(): string {
+    return selectedTemplate?.id === 'custom-table'
+      ? templateColumnsText
+      : selectedTemplate?.columns.join('\n') ?? templateColumnsText
+  }
+
+  function getVisibleTimerRows(timers: NoteTimer[]): Array<{ id: string; name: string; remaining: string; title: string }> {
+    return timers.map((timer) => {
+      const dueAt = resolveTimerDueAt(timer, timerNow)
+      return {
+        id: timer.id,
+        name: getCompactTimerName(timer.name),
+        remaining: formatTimerRemaining(dueAt, timerNow),
+        title: `${timer.name} ${new Date(dueAt).toLocaleString()}`
+      }
+    })
+  }
 
   async function refreshWorkspace(): Promise<void> {
     const nextWorkspace = await window.stickban.getWorkspace()
@@ -206,6 +242,47 @@ function App(): JSX.Element {
     }
   }
 
+  async function renameGroup(group: BoardSummary): Promise<void> {
+    const title = window.prompt('修改分组名称', group.title)?.trim()
+    if (!title || title === group.title) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    try {
+      const nextWorkspace = await window.stickban.updateBoard(group.id, { title })
+      setWorkspace(nextWorkspace)
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : '修改分组失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function removeGroup(group: BoardSummary): Promise<void> {
+    if (groups.length <= 1) {
+      setError('至少保留一个分组')
+      return
+    }
+
+    if (!window.confirm(`删除分组“${group.title}”？分组内便签也会删除。`)) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    try {
+      const nextWorkspace = await window.stickban.deleteBoard(group.id)
+      setWorkspace(nextWorkspace)
+      setSelectedNote(null)
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : '删除分组失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function createQuickNote(): Promise<void> {
     const title = draftTitle.trim()
     if (!title || !firstColumnId) {
@@ -236,14 +313,14 @@ function App(): JSX.Element {
       return
     }
 
-    const templateRows = normalizeTemplateRows(templateText)
+    const templateRows = normalizeTemplateRows(getTemplateRowsText())
     if (templateRows.length === 0) {
       setError('请先设置模板表格项目')
       return
     }
 
-    const html = buildTemplateNoteHtml(templateText, templateColumnsText)
-    const title = getSummaryFromHtml(html).slice(0, 80) || '模板便签'
+    const html = buildTemplateNoteHtml(getTemplateRowsText(), getTemplateColumnsText())
+    const title = selectedTemplate?.name ?? (getSummaryFromHtml(html).slice(0, 80) || '模板便签')
 
     setSaving(true)
     setError(null)
@@ -256,6 +333,7 @@ function App(): JSX.Element {
         })
       })
       setWorkspace(nextWorkspace)
+      setShowTemplatePanel(false)
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : '新增模板便签失败')
     } finally {
@@ -267,7 +345,8 @@ function App(): JSX.Element {
     note: NoteView,
     html: string,
     pinned = note.pinned,
-    timers: NoteTimer[] = note.timers
+    timers: NoteTimer[] = note.timers,
+    options: { closeAfterSave?: boolean; keepDialogOpen?: boolean } = { keepDialogOpen: true }
   ): Promise<void> {
     const summary = getSummaryFromHtml(html)
     const title = summary.slice(0, 80) || '未命名便签'
@@ -288,7 +367,11 @@ function App(): JSX.Element {
         .flatMap((column) => column.cards)
         .map(createNoteView)
         .find((candidate) => candidate.id === note.id)
-      setSelectedNote(updatedNote ?? null)
+      if (options.closeAfterSave) {
+        setSelectedNote(null)
+      } else if (options.keepDialogOpen && selectedNote?.id === note.id) {
+        setSelectedNote(updatedNote ?? null)
+      }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '保存便签失败')
     } finally {
@@ -297,7 +380,7 @@ function App(): JSX.Element {
   }
 
   async function togglePinned(note: NoteView): Promise<void> {
-    await saveNote(note, note.html, !note.pinned)
+    await saveNote(note, note.html, !note.pinned, note.timers, { keepDialogOpen: false })
   }
 
   async function addTimer(note: NoteView): Promise<void> {
@@ -311,12 +394,15 @@ function App(): JSX.Element {
       id: crypto.randomUUID(),
       name: timerName.trim() || '计时器',
       dueAt,
-      status: 'scheduled'
+      status: 'scheduled',
+      repeat: timerRepeat
     }
 
     setTimerName('')
     setTimerDueAt('')
-    await saveNote(note, getCurrentEditorHtml(), note.pinned, [...note.timers, nextTimer])
+    setTimerRepeat('none')
+    const inlineTimerHtml = `<p><span class="note-inline-timer" data-timer-id="${escapeHtml(nextTimer.id)}">⏱ ${escapeHtml(getCompactTimerName(nextTimer.name))}</span></p>`
+    await saveNote(note, `${getCurrentEditorHtml()}${inlineTimerHtml}`, note.pinned, [...note.timers, nextTimer])
   }
 
   async function deleteTimer(note: NoteView, timerId: string): Promise<void> {
@@ -474,6 +560,10 @@ function App(): JSX.Element {
       if (storedColumns && normalizeTemplateColumns(storedColumns).length > 0) {
         setTemplateColumnsText(storedColumns)
       }
+      const storedTemplateId = window.localStorage.getItem(TEMPLATE_SELECTED_STORAGE_KEY)
+      if (storedTemplateId && DEFAULT_NOTE_TEMPLATES.some((template) => template.id === storedTemplateId)) {
+        setSelectedTemplateId(storedTemplateId)
+      }
     } catch {
       setTemplateText(DEFAULT_TEMPLATE_TEXT)
       setTemplateColumnsText(DEFAULT_TEMPLATE_COLUMNS_TEXT)
@@ -487,6 +577,20 @@ function App(): JSX.Element {
   useEffect(() => {
     window.localStorage.setItem(TEMPLATE_COLUMNS_STORAGE_KEY, templateColumnsText)
   }, [templateColumnsText])
+
+  useEffect(() => {
+    window.localStorage.setItem(TEMPLATE_SELECTED_STORAGE_KEY, selectedTemplateId)
+  }, [selectedTemplateId])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setTimerNow(Date.now())
+    }, 60 * 1000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [])
 
   useEffect(() => {
     if (!workspace) {
@@ -505,17 +609,27 @@ function App(): JSX.Element {
       }
 
       const dueTimers = dueNote.timers.filter((timer) => timer.status === 'scheduled' && timer.dueAt <= now)
-      const nextTimers = dueNote.timers.map((timer) =>
-        dueTimers.some((dueTimer) => dueTimer.id === timer.id)
-          ? {
-              ...timer,
-              status: 'fired' as const
-            }
-          : timer
-      )
+      const nextTimers = dueNote.timers.map((timer) => {
+        if (!dueTimers.some((dueTimer) => dueTimer.id === timer.id)) {
+          return timer
+        }
 
-      void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers)
-      window.alert(`便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`)
+        if ((timer.repeat ?? 'none') !== 'none') {
+          return {
+            ...timer,
+            dueAt: resolveTimerDueAt(timer, now),
+            status: 'scheduled' as const
+          }
+        }
+
+        return {
+          ...timer,
+          status: 'fired' as const
+        }
+      })
+
+      void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers, { keepDialogOpen: false })
+      setError(`便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`)
     }, 10000)
 
     return () => {
@@ -660,46 +774,67 @@ function App(): JSX.Element {
         ) : null}
       </section>
 
-      {error ? <div className="status status-error">{error}</div> : null}
+      {error ? (
+        <button type="button" className="status-indicator" title={error} aria-label={error} onClick={() => setError(null)}>
+          <AlertCircle size={14} />
+        </button>
+      ) : null}
 
       {showTemplatePanel ? (
         <section className="template-panel" aria-label="便签模板">
           <div className="template-header">
             <div>
-              <div className="template-title">便签模板</div>
-              <div className="template-subtitle">左侧设置横向项目，右侧设置列名，生成一条可编辑表格便签</div>
+              <div className="template-title">生成模板便签</div>
+              <div className="template-subtitle">选择一个模板生成一条便签；表格模板可继续编辑行和列</div>
             </div>
-            <button type="button" className="secondary-action" onClick={() => setTemplateText((currentText) => appendTemplateRow(currentText))}>
-              新增项目
-            </button>
+            {selectedTemplate?.id === 'custom-table' ? (
+              <button type="button" className="secondary-action" onClick={() => setTemplateText((currentText) => appendTemplateRow(currentText))}>
+                新增项目
+              </button>
+            ) : null}
           </div>
-          <div className="template-grid">
-            <label>
-              <span>横向项目</span>
-              <textarea
-                className="template-textarea"
-                value={templateText}
-                onChange={(event) => setTemplateText(event.target.value)}
-                placeholder={`例如：客户
+          <div className="template-choice-list">
+            {DEFAULT_NOTE_TEMPLATES.map((template) => (
+              <button
+                type="button"
+                key={template.id}
+                className={template.id === selectedTemplateId ? 'template-choice active' : 'template-choice'}
+                onClick={() => setSelectedTemplateId(template.id)}
+              >
+                <strong>{template.name}</strong>
+                <span>{template.description}</span>
+              </button>
+            ))}
+          </div>
+          {selectedTemplate?.id === 'custom-table' ? (
+            <div className="template-grid">
+              <label>
+                <span>横向项目</span>
+                <textarea
+                  className="template-textarea"
+                  value={templateText}
+                  onChange={(event) => setTemplateText(event.target.value)}
+                  placeholder={`例如：客户
 电话
 地址
 备注`}
-              />
-            </label>
-            <label>
-              <span>列名</span>
-              <textarea
-                className="template-textarea"
-                value={templateColumnsText}
-                onChange={(event) => setTemplateColumnsText(event.target.value)}
-                placeholder={`例如：内容
+                />
+              </label>
+              <label>
+                <span>列名</span>
+                <textarea
+                  className="template-textarea"
+                  value={templateColumnsText}
+                  onChange={(event) => setTemplateColumnsText(event.target.value)}
+                  placeholder={`例如：内容
 跟进记录
 结果`}
-              />
-            </label>
-          </div>
+                />
+              </label>
+            </div>
+          ) : null}
           <footer className="template-actions">
-            <button type="button" className="secondary-action" onClick={() => setTemplateColumnsText((currentText) => appendTemplateColumn(currentText))}>
+            <button type="button" className="secondary-action" onClick={() => setTemplateColumnsText((currentText) => appendTemplateColumn(currentText))} disabled={selectedTemplate?.id !== 'custom-table'}>
               新增列
             </button>
             <button type="button" className="secondary-action" onClick={() => {
@@ -708,8 +843,8 @@ function App(): JSX.Element {
             }}>
               重置
             </button>
-            <button type="button" className="primary-action" onClick={() => void createTemplateNote()} disabled={saving || !firstColumnId || normalizeTemplateRows(templateText).length === 0 || normalizeTemplateColumns(templateColumnsText).length === 0}>
-              生成表格便签
+            <button type="button" className="primary-action" onClick={() => void createTemplateNote()} disabled={saving || !firstColumnId || normalizeTemplateRows(getTemplateRowsText()).length === 0 || normalizeTemplateColumns(getTemplateColumnsText()).length === 0}>
+              生成模板便签
             </button>
           </footer>
         </section>
@@ -719,15 +854,20 @@ function App(): JSX.Element {
         <aside className="group-sidebar" aria-label="便签分组">
           <div className="group-list">
             {groups.map((group) => (
-              <button
-                type="button"
-                className={group.id === workspace?.activeBoardId ? 'group-item active' : 'group-item'}
-                key={group.id}
-                onClick={() => void selectGroup(group)}
-              >
-                <span>{group.title}</span>
-                <small>{group.cardCount}</small>
-              </button>
+              <div className={group.id === workspace?.activeBoardId ? 'group-item active' : 'group-item'} key={group.id}>
+                <button type="button" className="group-main" onClick={() => void selectGroup(group)}>
+                  <span>{group.title}</span>
+                  <small>{group.cardCount}</small>
+                </button>
+                <div className="group-actions">
+                  <button type="button" onClick={() => void renameGroup(group)} aria-label="修改分组名称">
+                    <Pencil size={11} />
+                  </button>
+                  <button type="button" onClick={() => void removeGroup(group)} aria-label="删除分组">
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
           <div className="group-add">
@@ -762,6 +902,18 @@ function App(): JSX.Element {
                   {'boardTitle' in note && typeof note.boardTitle === 'string' ? <span className="note-search-badge">{note.boardTitle}</span> : null}
                   <div className="note-preview" dangerouslySetInnerHTML={{ __html: note.html }} />
                 </button>
+                {note.timers.length > 0 ? (
+                  <div className="note-timer-stack" aria-label="倒计时">
+                    {getVisibleTimerRows(note.timers).map((timer) => (
+                      <div className="note-timer-row" key={timer.id} title={timer.title}>
+                        <span>{timer.name}</span>
+                        <strong>{timer.remaining}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="note-timer-stack empty" aria-hidden="true" />
+                )}
                 <button type="button" className="note-delete" onClick={() => void deleteNote(note.id)} aria-label="删除便签">
                   <X size={13} />
                 </button>
@@ -836,7 +988,9 @@ function App(): JSX.Element {
                     <div className={timer.status === 'fired' ? 'timer-item fired' : 'timer-item'} key={timer.id}>
                       <div>
                         <strong>{timer.name}</strong>
-                        <span>{new Date(timer.dueAt).toLocaleString()}</span>
+                        <span>
+                          {formatTimerRemaining(resolveTimerDueAt(timer, timerNow), timerNow)} · {new Date(resolveTimerDueAt(timer, timerNow)).toLocaleString()}
+                        </span>
                       </div>
                       <button type="button" onClick={() => void deleteTimer(selectedNote, timer.id)} aria-label="删除计时器">
                         <Trash2 size={13} />
@@ -858,6 +1012,12 @@ function App(): JSX.Element {
                   value={timerDueAt}
                   onChange={(event) => setTimerDueAt(event.target.value)}
                 />
+                <select value={timerRepeat} onChange={(event) => setTimerRepeat(event.target.value as NoteTimerRepeat)} aria-label="计时器周期">
+                  <option value="none">单次</option>
+                  <option value="daily">每天</option>
+                  <option value="weekly">每周</option>
+                  <option value="monthly">每月</option>
+                </select>
                 <button type="button" onClick={() => void addTimer(selectedNote)}>
                   添加
                 </button>
@@ -868,7 +1028,7 @@ function App(): JSX.Element {
               <button type="button" className="secondary-action" onClick={() => setSelectedNote(null)}>
                 取消
               </button>
-              <button type="button" className="primary-action" onClick={() => void saveNote(selectedNote, getCurrentEditorHtml())}>
+              <button type="button" className="primary-action" onClick={() => void saveNote(selectedNote, getCurrentEditorHtml(), selectedNote.pinned, selectedNote.timers, { closeAfterSave: true })}>
                 保存
               </button>
             </footer>

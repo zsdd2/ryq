@@ -9,11 +9,14 @@ interface StoredNoteDescription {
   timers?: NoteTimer[]
 }
 
+export type NoteTimerRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
+
 export interface NoteTimer {
   id: string
   name: string
   dueAt: number
   status: 'scheduled' | 'fired'
+  repeat?: NoteTimerRepeat
 }
 
 export interface NoteView extends CardRecord {
@@ -52,6 +55,61 @@ export function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+export function getCompactTimerName(value: string): string {
+  const compact = Array.from(value.trim()).slice(0, 4).join('')
+  return compact || '计时'
+}
+
+function addMonths(timestamp: number, months: number): number {
+  const date = new Date(timestamp)
+  date.setMonth(date.getMonth() + months)
+  return date.getTime()
+}
+
+export function resolveTimerDueAt(timer: NoteTimer, now = Date.now()): number {
+  const repeat = timer.repeat ?? 'none'
+  if (repeat === 'none' || timer.dueAt > now) {
+    return timer.dueAt
+  }
+
+  const step =
+    repeat === 'daily'
+      ? 24 * 60 * 60 * 1000
+      : repeat === 'weekly'
+        ? 7 * 24 * 60 * 60 * 1000
+        : null
+
+  if (step !== null) {
+    const elapsedSteps = Math.floor((now - timer.dueAt) / step) + 1
+    return timer.dueAt + elapsedSteps * step
+  }
+
+  let nextDueAt = timer.dueAt
+  while (nextDueAt <= now) {
+    nextDueAt = addMonths(nextDueAt, 1)
+  }
+  return nextDueAt
+}
+
+export function formatTimerRemaining(dueAt: number, now = Date.now()): string {
+  const delta = dueAt - now
+  const absoluteDelta = Math.abs(delta)
+  const prefix = delta < 0 ? '超' : ''
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+
+  if (absoluteDelta >= day) {
+    return `${prefix}${Math.ceil(absoluteDelta / day)}天`
+  }
+
+  if (absoluteDelta >= hour) {
+    return `${prefix}${Math.ceil(absoluteDelta / hour)}小时`
+  }
+
+  return `${prefix}${Math.max(1, Math.ceil(absoluteDelta / minute))}分`
 }
 
 export function buildNoteDescription({ html, pinned }: { html: string; pinned: boolean }): string {
@@ -114,6 +172,10 @@ function normalizeTimers(value: unknown): NoteTimer[] {
       id: typeof timer.id === 'string' ? timer.id : crypto.randomUUID(),
       name: typeof timer.name === 'string' && timer.name.trim() ? timer.name.trim() : '计时器',
       dueAt: typeof timer.dueAt === 'number' ? timer.dueAt : Date.now(),
-      status: timer.status === 'fired' ? 'fired' : 'scheduled'
+      status: timer.status === 'fired' ? 'fired' : 'scheduled',
+      repeat:
+        timer.repeat === 'daily' || timer.repeat === 'weekly' || timer.repeat === 'monthly'
+          ? timer.repeat
+          : 'none'
     }))
 }
