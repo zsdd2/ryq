@@ -8,6 +8,7 @@ import type {
   BoardSummary,
   CardDraft,
   ColumnDraft,
+  NoteSearchResult,
   SyncCheckpoint,
   SyncNotice,
   SyncOperation,
@@ -21,6 +22,7 @@ const ACTIVE_BOARD_KEY = 'active_board_id'
 const DEVICE_ID_KEY = 'sync_device_id'
 const LAMPORT_CLOCK_KEY = 'sync_lamport_clock'
 const LAUNCH_ON_STARTUP_KEY = 'launch_on_startup'
+const FLOATING_WINDOW_STATE_KEY = 'floating_window_state'
 const ORDER_GAP = 1024
 const MIN_ORDER_GAP = 0.000001
 
@@ -50,6 +52,12 @@ export type RemoteOperationOutcome = 'applied' | 'noop' | 'deferred' | 'invalid'
 export interface RemoteOperationApplyResult {
   outcome: RemoteOperationOutcome
   notices: SyncNotice[]
+}
+
+export interface FloatingWindowState {
+  mode: 'launcher' | 'panel'
+  x: number | null
+  y: number | null
 }
 
 let db: Database.Database | null = null
@@ -688,7 +696,7 @@ function seedDatabase(): void {
             VALUES (?, ?, ?, ?, NULL, ?)
           `
         )
-        .run(boardId, 'Stickban', 0, ORDER_GAP, serializeSyncState({}))
+        .run(boardId, '默认分组', 0, ORDER_GAP, serializeSyncState({}))
       createDefaultColumns(boardId)
       setStateValue(ACTIVE_BOARD_KEY, boardId)
     })
@@ -1324,7 +1332,7 @@ export function initializeDatabase(userDataPath: string): void {
     db = null
   }
 
-  const databasePath = join(userDataPath, 'data', 'stickban.db')
+  const databasePath = join(userDataPath, 'data', 'renyiqian.db')
   mkdirSync(dirname(databasePath), { recursive: true })
 
   db = new Database(databasePath)
@@ -1351,6 +1359,43 @@ export function getLaunchOnStartupPreference(): boolean {
 
 export function setLaunchOnStartupPreference(value: boolean): void {
   setStateValue(LAUNCH_ON_STARTUP_KEY, value ? 'true' : 'false')
+}
+
+export function getFloatingWindowState(): FloatingWindowState {
+  const value = getStateValue(FLOATING_WINDOW_STATE_KEY)
+  if (!value) {
+    return {
+      mode: 'launcher',
+      x: null,
+      y: null
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Partial<FloatingWindowState>
+    return {
+      mode: parsed.mode === 'panel' ? 'panel' : 'launcher',
+      x: isFiniteNumber(parsed.x) ? parsed.x : null,
+      y: isFiniteNumber(parsed.y) ? parsed.y : null
+    }
+  } catch {
+    return {
+      mode: 'launcher',
+      x: null,
+      y: null
+    }
+  }
+}
+
+export function setFloatingWindowState(state: FloatingWindowState): void {
+  setStateValue(
+    FLOATING_WINDOW_STATE_KEY,
+    JSON.stringify({
+      mode: state.mode,
+      x: isFiniteNumber(state.x) ? state.x : null,
+      y: isFiniteNumber(state.y) ? state.y : null
+    })
+  )
 }
 
 export async function backupDatabase(destinationFile: string): Promise<void> {
@@ -1384,6 +1429,45 @@ export function getWorkspace(): WorkspaceRecord {
     activeBoardId,
     activeBoard: getBoardById(activeBoardId)
   }
+}
+
+export function searchNotes(query: string): NoteSearchResult[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) {
+    return []
+  }
+
+  const rows = getDb()
+    .prepare(
+      `
+        SELECT
+          cards.id,
+          cards.column_id AS columnId,
+          cards.title,
+          cards.description,
+          cards.created_at AS createdAt,
+          cards.updated_at AS updatedAt,
+          boards.id AS boardId,
+          boards.title AS boardTitle,
+          columns.title AS columnTitle
+        FROM cards
+        INNER JOIN columns ON columns.id = cards.column_id
+        INNER JOIN boards ON boards.id = columns.board_id
+        WHERE cards.deleted_at IS NULL
+          AND columns.deleted_at IS NULL
+          AND boards.deleted_at IS NULL
+        ORDER BY cards.updated_at DESC, cards.order_key ASC, cards.id ASC
+      `
+    )
+    .all() as Array<Omit<NoteSearchResult, 'position'>>
+
+  return rows
+    .filter((row) => `${row.title}\n${row.description}\n${row.boardTitle}\n${row.columnTitle}`.toLowerCase().includes(normalizedQuery))
+    .slice(0, 50)
+    .map((row, index) => ({
+      ...row,
+      position: index
+    }))
 }
 
 export function getDeviceId(): string {
@@ -1421,7 +1505,7 @@ export function getWorkspaceBootstrapState(): WorkspaceBootstrapState {
 
   const isPristineSeedWorkspace =
     boards.length === 1 &&
-    boards[0].title === 'Stickban' &&
+    boards[0].title === '默认分组' &&
     columns.length === DEFAULT_COLUMNS.length &&
     columns.every((column) => column.board_id === boards[0].id) &&
     DEFAULT_COLUMNS.every((title) => columns.some((column) => column.title === title)) &&

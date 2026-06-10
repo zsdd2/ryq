@@ -1,117 +1,101 @@
-import { app } from 'electron'
 import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater'
-import type { UpdateError, UpdateInfoSummary, UpdateStatus } from '../shared/types'
+import type { UpdateInfoSummary, UpdateStatus } from '../shared/types'
 
-const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
-
-function now(): string {
-  return new Date().toISOString()
-}
-
-function toUpdateSummary(info: UpdateInfo): UpdateInfoSummary {
+function toUpdateInfoSummary(info: UpdateInfo): UpdateInfoSummary {
   return {
     version: info.version,
-    releaseName: info.releaseName ?? null,
-    releaseDateUtc: info.releaseDate ? new Date(info.releaseDate).toISOString() : null
+    releaseName: typeof info.releaseName === 'string' ? info.releaseName : null,
+    releaseDateUtc: typeof info.releaseDate === 'string' ? info.releaseDate : null
   }
 }
 
-function toFriendlyError(error: unknown): UpdateError {
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-      atUtc: now()
-    }
-  }
-
+function createUpdateError(message: string): { message: string; atUtc: string } {
   return {
-    message: 'Unexpected update error',
-    atUtc: now()
+    message,
+    atUtc: new Date().toISOString()
   }
 }
 
 export class UpdateManager {
-  private readonly status: UpdateStatus = {
-    supported: process.platform === 'win32' && app.isPackaged,
-    phase: process.platform === 'win32' && app.isPackaged ? 'idle' : 'disabled',
-    currentVersion: app.getVersion(),
-    availableUpdate: null,
-    downloadedUpdate: null,
-    downloadProgressPercent: null,
-    lastCheckedAtUtc: null,
-    lastDownloadedAtUtc: null,
-    lastError: null
-  }
+  private readonly supported: boolean
+  private status: UpdateStatus
 
-  private initialized = false
-  private checkTimer: NodeJS.Timeout | null = null
-  private checkInFlight = false
-  private downloadInFlight = false
-
-  initialize(): void {
-    if (this.initialized || !this.status.supported) {
-      return
+  constructor(currentVersion: string, supported: boolean) {
+    this.supported = supported
+    this.status = {
+      supported,
+      phase: supported ? 'idle' : 'disabled',
+      currentVersion,
+      availableUpdate: null,
+      downloadedUpdate: null,
+      downloadProgressPercent: null,
+      lastCheckedAtUtc: null,
+      lastDownloadedAtUtc: null,
+      lastError: null
     }
 
-    this.initialized = true
-    autoUpdater.autoDownload = true
-    autoUpdater.autoInstallOnAppQuit = false
-    autoUpdater.autoRunAppAfterInstall = false
+    autoUpdater.autoDownload = false
+    autoUpdater.autoInstallOnAppQuit = true
 
     autoUpdater.on('checking-for-update', () => {
-      this.status.phase = 'checking'
-      this.status.downloadProgressPercent = null
-      this.status.lastCheckedAtUtc = now()
-      this.status.lastError = null
+      this.status = {
+        ...this.status,
+        phase: 'checking',
+        lastError: null
+      }
     })
 
-    autoUpdater.on('update-available', (info) => {
-      this.downloadInFlight = true
-      this.status.phase = 'available'
-      this.status.availableUpdate = toUpdateSummary(info)
-      this.status.downloadedUpdate = null
-      this.status.downloadProgressPercent = 0
-      this.status.lastCheckedAtUtc = now()
-      this.status.lastError = null
+    autoUpdater.on('update-available', (info: UpdateInfo) => {
+      this.status = {
+        ...this.status,
+        phase: 'available',
+        availableUpdate: toUpdateInfoSummary(info),
+        downloadedUpdate: null,
+        downloadProgressPercent: null,
+        lastCheckedAtUtc: new Date().toISOString(),
+        lastError: null
+      }
     })
 
     autoUpdater.on('update-not-available', () => {
-      this.status.phase = 'up-to-date'
-      this.status.availableUpdate = null
-      this.status.downloadedUpdate = null
-      this.status.downloadProgressPercent = null
-      this.status.lastCheckedAtUtc = now()
-      this.status.lastError = null
+      this.status = {
+        ...this.status,
+        phase: 'up-to-date',
+        availableUpdate: null,
+        downloadedUpdate: null,
+        downloadProgressPercent: null,
+        lastCheckedAtUtc: new Date().toISOString(),
+        lastError: null
+      }
     })
 
     autoUpdater.on('download-progress', (progress: ProgressInfo) => {
-      this.downloadInFlight = true
-      this.status.phase = 'downloading'
-      this.status.downloadProgressPercent = Number(progress.percent.toFixed(1))
-      this.status.lastError = null
+      this.status = {
+        ...this.status,
+        phase: 'downloading',
+        downloadProgressPercent: Number.isFinite(progress.percent) ? Math.round(progress.percent) : null,
+        lastError: null
+      }
     })
 
-    autoUpdater.on('update-downloaded', (info) => {
-      this.downloadInFlight = false
-      this.status.phase = 'downloaded'
-      this.status.downloadedUpdate = toUpdateSummary(info)
-      this.status.downloadProgressPercent = 100
-      this.status.lastDownloadedAtUtc = now()
-      this.status.lastError = null
+    autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+      this.status = {
+        ...this.status,
+        phase: 'downloaded',
+        downloadedUpdate: toUpdateInfoSummary(info),
+        downloadProgressPercent: 100,
+        lastDownloadedAtUtc: new Date().toISOString(),
+        lastError: null
+      }
     })
 
-    autoUpdater.on('error', (error) => {
-      this.checkInFlight = false
-      this.downloadInFlight = false
-      this.status.phase = 'error'
-      this.status.downloadProgressPercent = null
-      this.status.lastError = toFriendlyError(error)
+    autoUpdater.on('error', (error: Error) => {
+      this.status = {
+        ...this.status,
+        phase: 'error',
+        lastError: createUpdateError(error.message)
+      }
     })
-
-    void this.checkForUpdates()
-    this.checkTimer = setInterval(() => {
-      void this.checkForUpdates()
-    }, UPDATE_CHECK_INTERVAL_MS)
   }
 
   getStatus(): UpdateStatus {
@@ -119,66 +103,55 @@ export class UpdateManager {
   }
 
   async checkForUpdates(): Promise<UpdateStatus> {
-    if (!this.status.supported) {
+    if (!this.supported) {
       return this.getStatus()
     }
 
-    if (this.checkInFlight || this.downloadInFlight || this.status.phase === 'downloaded') {
-      return this.getStatus()
-    }
-
-    this.checkInFlight = true
     try {
+      this.status = {
+        ...this.status,
+        phase: 'checking',
+        lastError: null
+      }
       await autoUpdater.checkForUpdates()
     } catch (error) {
-      this.status.phase = 'error'
-      this.status.lastError = toFriendlyError(error)
-    } finally {
-      this.checkInFlight = false
+      this.status = {
+        ...this.status,
+        phase: 'error',
+        lastError: createUpdateError(error instanceof Error ? error.message : '检查更新失败')
+      }
     }
 
     return this.getStatus()
   }
 
   async downloadUpdate(): Promise<UpdateStatus> {
-    if (!this.status.supported) {
+    if (!this.supported || !this.status.availableUpdate) {
       return this.getStatus()
     }
 
-    if (this.status.phase === 'downloaded' || this.downloadInFlight) {
-      return this.getStatus()
-    }
-
-    if (this.status.availableUpdate) {
-      try {
-        this.downloadInFlight = true
-        await autoUpdater.downloadUpdate()
-      } catch (error) {
-        this.downloadInFlight = false
-        this.status.phase = 'error'
-        this.status.lastError = toFriendlyError(error)
+    try {
+      this.status = {
+        ...this.status,
+        phase: 'downloading',
+        downloadProgressPercent: 0,
+        lastError: null
       }
-
-      return this.getStatus()
+      await autoUpdater.downloadUpdate()
+    } catch (error) {
+      this.status = {
+        ...this.status,
+        phase: 'error',
+        lastError: createUpdateError(error instanceof Error ? error.message : '下载更新失败')
+      }
     }
 
-    return this.checkForUpdates()
+    return this.getStatus()
   }
 
-  quitAndInstallUpdate(): void {
-    if (!this.status.supported || this.status.phase !== 'downloaded') {
-      return
-    }
-
-    setImmediate(() => {
-      autoUpdater.quitAndInstall(false, false)
-    })
-  }
-
-  dispose(): void {
-    if (this.checkTimer) {
-      clearInterval(this.checkTimer)
-      this.checkTimer = null
+  quitAndInstall(): void {
+    if (this.supported && this.status.phase === 'downloaded') {
+      autoUpdater.quitAndInstall(false, true)
     }
   }
 }

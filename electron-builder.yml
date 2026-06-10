@@ -1,5 +1,5 @@
-appId: com.ivanyort.stickban
-productName: Stickban
+appId: com.renyiqian.desktop
+productName: 任意签
 asar: true
 directories:
   output: dist
@@ -11,7 +11,7 @@ linux:
     - AppImage
     - tar.gz
 win:
-  icon: logos/ico_kit/Web/stickban-app.ico
+  icon: logos/renyiqian-logo.ico
   target:
     - nsis
 nsis:
@@ -19,9 +19,9 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   runAfterFinish: false
-artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+artifactName: renyiqian-setup-${version}.${ext}
 publish:
   - provider: github
     owner: ivanyort
-    repo: stickban
+    repo: renyiqian
     releaseType: release

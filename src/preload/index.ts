@@ -10,6 +10,7 @@ import type {
 
 const api: StickbanApi = {
   getWorkspace: () => ipcRenderer.invoke('workspace:get'),
+  searchNotes: (query: string) => ipcRenderer.invoke('workspace:searchNotes', query),
   createBoard: (draft: BoardDraft) => ipcRenderer.invoke('board:create', draft),
   updateBoard: (boardId: string, draft: BoardDraft) => ipcRenderer.invoke('board:update', boardId, draft),
   deleteBoard: (boardId: string) => ipcRenderer.invoke('board:delete', boardId),
@@ -25,6 +26,9 @@ const api: StickbanApi = {
   moveCard: (payload: CardMovePayload) => ipcRenderer.invoke('card:move', payload),
   getWindowState: () => ipcRenderer.invoke('window:getState'),
   setAlwaysOnTop: (value: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', value),
+  setFloatingPanelOpen: (value: boolean) => ipcRenderer.invoke('window:setFloatingPanelOpen', value),
+  moveFloatingWindowBy: (delta: { deltaX: number; deltaY: number }) =>
+    ipcRenderer.invoke('window:moveFloatingWindowBy', delta),
   setLaunchOnStartup: (value: boolean) => ipcRenderer.invoke('window:setLaunchOnStartup', value),
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggleMaximize'),

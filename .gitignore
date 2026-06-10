@@ -22,9 +22,16 @@ yarn-error.log*
 !.env.example
 
 # Caches
+.codegraph/
 .cache/
 .turbo/
 .vite/
+.electron-cache/
+.localappdata/
+.node-gyp/
+.npm-cache/
+.npm-cache-node20/
+.tools/
 *.tsbuildinfo
 
 # Test artifacts

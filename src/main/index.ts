@@ -8,32 +8,49 @@ import {
   deleteBoard,
   deleteCard,
   deleteColumn,
+  getFloatingWindowState,
   getLaunchOnStartupPreference,
   getWorkspace,
   initializeDatabase,
   moveColumn,
   moveCard,
+  searchNotes,
   setActiveBoard,
+  setFloatingWindowState,
   setLaunchOnStartupPreference,
   updateBoard,
   updateCard,
   updateColumn
 } from './database'
 import type { BoardDraft, CardDraft, CardMovePayload, ColumnDraft, ColumnMovePayload } from '../shared/types'
-import { SyncManager } from './sync'
+import {
+  createFloatingWindowOptions,
+  getFloatingWindowBounds,
+  getMovedWindowPosition,
+  type FloatingWindowMode
+} from './floating-window'
 import { UpdateManager } from './update'
+import {
+  createLocalOnlySyncStatus,
+  getLocalOnlySyncFolderInfo,
+  getLocalOnlySyncNotices
+} from './local-only-services'
 
 let mainWindow: BrowserWindow | null = null
-let syncManager: SyncManager | null = null
 let updateManager: UpdateManager | null = null
+let updateCheckInterval: NodeJS.Timeout | null = null
 let backgroundServicesInitialized = false
-const WINDOWS_APP_USER_MODEL_ID = 'com.ivanyort.stickban'
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
+let floatingWindowMode: FloatingWindowMode = 'launcher'
+const WINDOWS_APP_USER_MODEL_ID = 'com.renyiqian.desktop'
 const WINDOWS_RUN_KEY_USER = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const WINDOWS_RUN_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const WINDOWS_STARTUP_APPROVED_KEY_USER = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run'
 const WINDOWS_STARTUP_APPROVED_KEY_MACHINE =
   'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run'
+
+app.setName('renyiqian')
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock()
 
 if (process.platform === 'win32') {
   app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID)
@@ -93,7 +110,7 @@ function deleteRegistryValue(keyPath: string, valueName: string): void {
   }
 }
 
-function isStickbanLaunchItem(itemPath: string): boolean {
+function isRenyiqianLaunchItem(itemPath: string): boolean {
   const normalizedItemPath = normalizeWindowsPath(itemPath)
   const normalizedCurrentPath = normalizeWindowsPath(process.execPath)
   const executableName = basename(normalizedCurrentPath)
@@ -108,13 +125,13 @@ function cleanupDuplicateLaunchOnStartupEntries(): void {
   const settings = app.getLoginItemSettings({
     path: process.execPath
   })
-  const stickbanItems = settings.launchItems.filter((item) => isStickbanLaunchItem(item.path))
+  const renyiqianItems = settings.launchItems.filter((item) => isRenyiqianLaunchItem(item.path))
 
-  if (stickbanItems.length <= 1) {
+  if (renyiqianItems.length <= 1) {
     return
   }
 
-  for (const item of stickbanItems) {
+  for (const item of renyiqianItems) {
     const scope = toLaunchItemScope(item.scope)
     deleteRegistryValue(getRunRegistryPath(scope), item.name)
     deleteRegistryValue(getStartupApprovedRegistryPath(scope), item.name)
@@ -140,6 +157,7 @@ function getWindowState() {
 
   return {
     alwaysOnTop: mainWindow?.isAlwaysOnTop() ?? false,
+    floatingPanelOpen: floatingWindowMode === 'panel',
     launchOnStartup: startupState.enabled,
     launchOnStartupConfigured: startupState.configured,
     launchOnStartupSupported: isLaunchOnStartupSupported(),
@@ -155,8 +173,15 @@ function initializeBackgroundServices(): void {
   }
 
   backgroundServicesInitialized = true
-  syncManager?.initialize()
-  updateManager?.initialize()
+  void updateManager?.checkForUpdates()
+  if (updateManager?.getStatus().supported && updateCheckInterval === null) {
+    updateCheckInterval = setInterval(
+      () => {
+        void updateManager?.checkForUpdates()
+      },
+      4 * 60 * 60 * 1000
+    )
+  }
 }
 
 function presentMainWindow(): void {
@@ -186,33 +211,26 @@ function presentMainWindow(): void {
 }
 
 function createMainWindow(): BrowserWindow {
-  const window = new BrowserWindow({
-    width: 1360,
-    height: 860,
-    minWidth: 1080,
-    minHeight: 680,
-    show: false,
-    title: 'Stickban',
-    backgroundColor: '#eef2ff',
-    ...(process.platform === 'win32'
-      ? {
-          titleBarStyle: 'hidden' as const,
-          titleBarOverlay: {
-            color: '#fdfbf8',
-            symbolColor: '#7f6758',
-            height: 56
+  const floatingState = getFloatingWindowState()
+  floatingWindowMode = floatingState.mode
+  const bounds = getFloatingWindowBounds(floatingState.mode)
+  const window = new BrowserWindow(
+    {
+      ...createFloatingWindowOptions({
+      platform: process.platform,
+        preloadPath: join(__dirname, '../preload/index.js'),
+        mode: floatingState.mode
+      }),
+      width: bounds.width,
+      height: bounds.height,
+      ...(floatingState.x !== null && floatingState.y !== null
+        ? {
+            x: floatingState.x,
+            y: floatingState.y
           }
-        }
-      : {
-          frame: false
-        }),
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false
+        : {})
     }
-  })
+  )
 
   if (process.platform === 'win32' || process.platform === 'linux') {
     window.removeMenu()
@@ -221,6 +239,15 @@ function createMainWindow(): BrowserWindow {
   window.once('ready-to-show', () => {
     window.setMenuBarVisibility(false)
     window.show()
+  })
+
+  window.on('move', () => {
+    const [x, y] = window.getPosition()
+    setFloatingWindowState({
+      ...getFloatingWindowState(),
+      x,
+      y
+    })
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -232,8 +259,27 @@ function createMainWindow(): BrowserWindow {
   return window
 }
 
+function setFloatingWindowMode(mode: FloatingWindowMode): void {
+  if (!mainWindow) {
+    return
+  }
+
+  const bounds = getFloatingWindowBounds(mode)
+  const [x, y] = mainWindow.getPosition()
+  floatingWindowMode = mode
+  mainWindow.setResizable(mode === 'panel')
+  mainWindow.setAlwaysOnTop(true)
+  mainWindow.setSize(bounds.width, bounds.height)
+  setFloatingWindowState({
+    mode,
+    x,
+    y
+  })
+}
+
 function registerIpc(): void {
   ipcMain.handle('workspace:get', () => getWorkspace())
+  ipcMain.handle('workspace:searchNotes', (_event, query: string) => searchNotes(query))
   ipcMain.handle('board:create', (_event, draft: BoardDraft) => createBoard(draft))
   ipcMain.handle('board:update', (_event, boardId: string, draft: BoardDraft) => updateBoard(boardId, draft))
   ipcMain.handle('board:delete', (_event, boardId: string) => deleteBoard(boardId))
@@ -257,6 +303,24 @@ function registerIpc(): void {
     mainWindow?.setAlwaysOnTop(value)
     return getWindowState()
   })
+  ipcMain.handle('window:setFloatingPanelOpen', (_event, value: boolean) => {
+    setFloatingWindowMode(value ? 'panel' : 'launcher')
+    return getWindowState()
+  })
+  ipcMain.handle('window:moveFloatingWindowBy', (_event, delta: { deltaX: number; deltaY: number }) => {
+    if (!mainWindow) {
+      return
+    }
+
+    const [currentX, currentY] = mainWindow.getPosition()
+    const [nextX, nextY] = getMovedWindowPosition([currentX, currentY], delta)
+    mainWindow.setPosition(nextX, nextY)
+    setFloatingWindowState({
+      ...getFloatingWindowState(),
+      x: nextX,
+      y: nextY
+    })
+  })
   ipcMain.handle('window:setLaunchOnStartup', (_event, value: boolean) => {
     if (!isLaunchOnStartupSupported()) {
       return getWindowState()
@@ -267,7 +331,7 @@ function registerIpc(): void {
     return getWindowState()
   })
   ipcMain.handle('window:minimize', () => {
-    mainWindow?.minimize()
+    setFloatingWindowMode('launcher')
   })
   ipcMain.handle('window:toggleMaximize', () => {
     if (!mainWindow) {
@@ -275,6 +339,7 @@ function registerIpc(): void {
 
       return {
         alwaysOnTop: false,
+        floatingPanelOpen: floatingWindowMode === 'panel',
         launchOnStartup: startupState.enabled,
         launchOnStartupConfigured: startupState.configured,
         launchOnStartupSupported: isLaunchOnStartupSupported(),
@@ -295,18 +360,18 @@ function registerIpc(): void {
   ipcMain.handle('window:close', () => {
     mainWindow?.close()
   })
-  ipcMain.handle('sync:getStatus', () => syncManager?.getStatus())
-  ipcMain.handle('sync:chooseFolder', () => syncManager?.chooseSyncFolder(mainWindow))
-  ipcMain.handle('sync:clearFolder', () => syncManager?.clearSyncFolder())
-  ipcMain.handle('sync:runNow', () => syncManager?.syncNow())
-  ipcMain.handle('sync:adoptRemoteWorkspace', () => syncManager?.adoptRemoteWorkspace())
-  ipcMain.handle('sync:getFolderInfo', () => syncManager?.getFolderInfo())
-  ipcMain.handle('sync:getNotices', () => syncManager?.getNotices())
+  ipcMain.handle('sync:getStatus', () => createLocalOnlySyncStatus())
+  ipcMain.handle('sync:chooseFolder', () => createLocalOnlySyncStatus())
+  ipcMain.handle('sync:clearFolder', () => createLocalOnlySyncStatus())
+  ipcMain.handle('sync:runNow', () => createLocalOnlySyncStatus())
+  ipcMain.handle('sync:adoptRemoteWorkspace', () => createLocalOnlySyncStatus())
+  ipcMain.handle('sync:getFolderInfo', () => getLocalOnlySyncFolderInfo())
+  ipcMain.handle('sync:getNotices', () => getLocalOnlySyncNotices())
   ipcMain.handle('update:getStatus', () => updateManager?.getStatus())
   ipcMain.handle('update:check', () => updateManager?.checkForUpdates())
   ipcMain.handle('update:download', () => updateManager?.downloadUpdate())
   ipcMain.handle('update:quitAndInstall', () => {
-    updateManager?.quitAndInstallUpdate()
+    updateManager?.quitAndInstall()
   })
 }
 
@@ -318,10 +383,9 @@ if (hasSingleInstanceLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     initializeDatabase(app.getPath('userData'))
+    updateManager = new UpdateManager(app.getVersion(), app.isPackaged)
     cleanupDuplicateLaunchOnStartupEntries()
     applyLaunchOnStartupPreference(getLaunchOnStartupPreference())
-    syncManager = new SyncManager(app.getPath('userData'))
-    updateManager = new UpdateManager()
     registerIpc()
     presentMainWindow()
 
@@ -336,9 +400,11 @@ if (hasSingleInstanceLock) {
 }
 
 app.on('before-quit', () => {
-  syncManager?.flushPendingLocalOperationsToRemote()
-  syncManager?.dispose()
-  updateManager?.dispose()
+  backgroundServicesInitialized = false
+  if (updateCheckInterval !== null) {
+    clearInterval(updateCheckInterval)
+    updateCheckInterval = null
+  }
 })
 
 app.on('window-all-closed', () => {

@@ -37,8 +37,15 @@ export interface WorkspaceRecord {
   activeBoard: BoardRecord
 }
 
+export interface NoteSearchResult extends CardRecord {
+  boardId: string
+  boardTitle: string
+  columnTitle: string
+}
+
 export interface WindowState {
   alwaysOnTop: boolean
+  floatingPanelOpen: boolean
   launchOnStartup: boolean
   launchOnStartupConfigured: boolean
   launchOnStartupSupported: boolean
@@ -220,6 +227,7 @@ export interface ColumnMovePayload {
 
 export interface StickbanApi {
   getWorkspace: () => Promise<WorkspaceRecord>
+  searchNotes: (query: string) => Promise<NoteSearchResult[]>
   createBoard: (draft: BoardDraft) => Promise<WorkspaceRecord>
   updateBoard: (boardId: string, draft: BoardDraft) => Promise<WorkspaceRecord>
   deleteBoard: (boardId: string) => Promise<WorkspaceRecord>
@@ -234,6 +242,8 @@ export interface StickbanApi {
   moveCard: (payload: CardMovePayload) => Promise<WorkspaceRecord>
   getWindowState: () => Promise<WindowState>
   setAlwaysOnTop: (value: boolean) => Promise<WindowState>
+  setFloatingPanelOpen: (value: boolean) => Promise<WindowState>
+  moveFloatingWindowBy: (delta: { deltaX: number; deltaY: number }) => Promise<void>
   setLaunchOnStartup: (value: boolean) => Promise<WindowState>
   minimizeWindow: () => Promise<void>
   toggleMaximizeWindow: () => Promise<WindowState>
