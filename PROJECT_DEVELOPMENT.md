@@ -322,6 +322,19 @@ Updated UI target:
   - `dist/renyiqian-setup-1.1.3.exe.blockmap`
   - `dist/latest.yml`
 
+## Latest Verification - Empty Release Fix
+
+- Investigated updater error: packaged app requested `https://github.com/zsdd2/ryq/releases/download/v1.2.0/latest.yml` and received 404.
+- Confirmed remote tag `v1.2.0` exists and points to the same commit as `v1.1.3`.
+- Root cause: the GitHub Actions release workflow created the GitHub Release before the Windows build/upload completed. If the build or upload failed, an empty release could still become GitHub's latest release, causing `electron-updater` to request a missing `latest.yml`.
+- Changed `.github/workflows/release.yml` so the release is created only after the Windows artifacts exist.
+- Bumped package metadata to `1.2.1` so the next online release supersedes the broken `v1.2.0` latest release.
+- `npm run dist:win` passed and generated:
+  - `dist/renyiqian-setup-1.2.1.exe`
+  - `dist/renyiqian-setup-1.2.1.exe.blockmap`
+  - `dist/latest.yml`
+- Verified `dist/latest.yml` points to `renyiqian-setup-1.2.1.exe`.
+
 ## Environment Notes
 
 - Use the project-local Node runtime for this checkout:
