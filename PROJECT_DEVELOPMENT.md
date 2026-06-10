@@ -35,7 +35,7 @@ Prepare 任意签 1.0.0 for local Windows testing with a logo-only floating laun
 | Logo-only launcher | Implemented | Collapsed launcher is now a 96x96 transparent window containing only the provided logo; the previous card, side buttons, and 任意签 text were removed. |
 | Startup toggle | Implemented | Renderer title bar now exposes a compact 开机启动 button backed by the existing Windows login-item IPC path. |
 | Remote update | Implemented locally | `electron-updater` is restored, packaged builds check GitHub Releases at startup, every 4 hours, and through a visible 检查更新 button. |
-| GitHub push | In progress | Target repository confirmed as `https://github.com/zsdd2/ryq`; release/updater config is being switched to that repository before pushing. |
+| GitHub push | Done | `main` was pushed to `https://github.com/zsdd2/ryq`; `v1.0.0` tag was pushed as the first 任意签 release baseline. |
 
 ## Scope Boundary
 
@@ -275,6 +275,8 @@ Updated UI target:
 - Changed `electron-builder.yml` publish target from the temporary `ivanyort/renyiqian` value to `zsdd2/ryq`.
 - Updated the GitHub Release workflow title and notes from Stickban to 任意签.
 - Push target: `https://github.com/zsdd2/ryq`.
+- Pushed `main` to GitHub after merging the remote initial README commit without overwriting the local project README.
+- Pushed tag `v1.0.0` at the current release baseline so future automated releases can increment from 1.0.0.
 
 ## Environment Notes
 
