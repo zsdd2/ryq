@@ -278,6 +278,17 @@ Updated UI target:
 - Pushed `main` to GitHub after merging the remote initial README commit without overwriting the local project README.
 - Pushed tag `v1.0.0` at the current release baseline so future automated releases can increment from 1.0.0.
 
+## Latest Verification - Local 1.0.1 Package
+
+- Bumped local package metadata from `1.0.0` to `1.0.1`.
+- `npm test` passed: 7 test files, 26 tests.
+- `npm run dist:win` passed and generated:
+  - `dist/renyiqian-setup-1.0.1.exe`
+  - `dist/renyiqian-setup-1.0.1.exe.blockmap`
+  - `dist/latest.yml`
+- Verified `dist/latest.yml` points to `renyiqian-setup-1.0.1.exe`.
+- Verified packaged updater config points to `zsdd2/ryq`.
+
 ## Environment Notes
 
 - Use the project-local Node runtime for this checkout:
