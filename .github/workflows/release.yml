@@ -47,8 +47,8 @@ jobs:
             echo "Release $TAG already exists"
           else
             gh release create "$TAG" \
-              --title "Stickban $VERSION" \
-              --notes "Automatic release for version $VERSION (${BUMP} bump)." \
+              --title "任意签 $VERSION" \
+              --notes "Automatic release for 任意签 version $VERSION (${BUMP} bump)." \
               --generate-notes
           fi
 

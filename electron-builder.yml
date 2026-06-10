@@ -22,6 +22,6 @@ nsis:
 artifactName: renyiqian-setup-${version}.${ext}
 publish:
   - provider: github
-    owner: ivanyort
-    repo: renyiqian
+    owner: zsdd2
+    repo: ryq
     releaseType: release

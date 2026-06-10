@@ -35,7 +35,7 @@ Prepare 任意签 1.0.0 for local Windows testing with a logo-only floating laun
 | Logo-only launcher | Implemented | Collapsed launcher is now a 96x96 transparent window containing only the provided logo; the previous card, side buttons, and 任意签 text were removed. |
 | Startup toggle | Implemented | Renderer title bar now exposes a compact 开机启动 button backed by the existing Windows login-item IPC path. |
 | Remote update | Implemented locally | `electron-updater` is restored, packaged builds check GitHub Releases at startup, every 4 hours, and through a visible 检查更新 button. |
-| GitHub push | Blocked | Current remote is still `https://github.com/ivanyort/stickban.git`; a new 任意签 repository URL or GitHub CLI/auth setup is required before pushing source safely. |
+| GitHub push | In progress | Target repository confirmed as `https://github.com/zsdd2/ryq`; release/updater config is being switched to that repository before pushing. |
 
 ## Scope Boundary
 
@@ -267,7 +267,14 @@ Updated UI target:
   - `dist/renyiqian-setup-1.0.0.exe`
   - `dist/renyiqian-setup-1.0.0.exe.blockmap`
   - `dist/latest.yml`
-- GitHub push is not completed because the checkout still points at the upstream Stickban remote. Do not push this fork until `origin` is changed to the intended 任意签 repository.
+- GitHub target repository was confirmed as `https://github.com/zsdd2/ryq`.
+- Next release push should go to the `zsdd2/ryq` `main` branch. The existing GitHub Actions release workflow will create a GitHub Release and upload the Windows installer, blockmap, and `latest.yml`.
+
+## Latest Verification - GitHub Remote Update Target
+
+- Changed `electron-builder.yml` publish target from the temporary `ivanyort/renyiqian` value to `zsdd2/ryq`.
+- Updated the GitHub Release workflow title and notes from Stickban to 任意签.
+- Push target: `https://github.com/zsdd2/ryq`.
 
 ## Environment Notes
 
