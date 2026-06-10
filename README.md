@@ -91,19 +91,20 @@ The script fetches the remote and performs a fast-forward-only update, but it re
 
 ## Local Data Path
 
-Stickban persists its local SQLite database at:
+The current Renyiqian desktop build persists its local SQLite database at:
 
 ```text
-<userData>/data/stickban.db
+<userData>/data/renyiqian.db
 ```
 
 Typical locations:
 
-- Windows packaged app: `%APPDATA%/Stickban/data/stickban.db`
-- Linux packaged app: `~/.config/Stickban/data/stickban.db`
-- Linux development runs: `~/.config/Electron/data/stickban.db`
+- Windows packaged app: `%APPDATA%/renyiqian/data/renyiqian.db`
+- Legacy Windows builds may have used `%APPDATA%/任意签/data/renyiqian.db` or `%APPDATA%/Stickban/data/stickban.db`; startup migration copies those databases into the canonical `renyiqian` directory when the new directory has no user notes.
+- Linux packaged app: `~/.config/renyiqian/data/renyiqian.db`
+- Linux development runs may still use an Electron development user-data directory.
 
-The Linux development path may use `Electron` instead of `Stickban` because Electron dev runs can inherit the default app name before packaging.
+The Windows packaged path is intentionally stable across reinstall and update flows so local notes are not lost when product display names change.
 
 ## Core Principles
 

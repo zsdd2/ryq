@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createFloatingWindowOptions, getMovedWindowPosition } from './floating-window'
+import { createFloatingWindowOptions, getCollapsedLauncherPosition, getMovedWindowPosition } from './floating-window'
 
 describe('createFloatingWindowOptions', () => {
   it('creates a compact always-on-top floating launcher window', () => {
@@ -40,5 +40,9 @@ describe('createFloatingWindowOptions', () => {
 
   it('computes a moved launcher position from pointer deltas', () => {
     expect(getMovedWindowPosition([120, 80], { deltaX: 18.4, deltaY: -9.6 })).toEqual([138, 70])
+  })
+
+  it('collapses the panel back to a centered launcher position', () => {
+    expect(getCollapsedLauncherPosition({ x: 100, y: 80, width: 680, height: 520 })).toEqual([396, 296])
   })
 })

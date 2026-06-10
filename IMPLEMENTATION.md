@@ -55,6 +55,8 @@ This document tracks the real implementation state of the repository and the hig
 - GitHub Pages deployment workflow configured with repository-level fork protection
 - Windows packaging now points to the curated icon kit under `logos/ico_kit`, using a generated `256x256+` `.ico` asset derived from the kit's square icon as the installer/app icon source
 - The 任意签 fork currently builds a compact floating-note experience with a logo-only collapsed launcher, grouped local notes, rich note editing, global search, table-template notes, a Windows startup toggle, and packaged GitHub Releases update checks through `electron-updater`
+- The Windows packaged app now pins its canonical local data directory to `%APPDATA%/renyiqian` and migrates legacy `%APPDATA%/任意签` or `%APPDATA%/Stickban` databases only when the canonical database has no user notes
+- Collapsing the note panel back to launcher mode now explicitly restores, shows, raises, and centers the 88x88 logo launcher instead of letting the window stay hidden or shrink from an unsafe position
 
 ## Current Implementation Focus
 
@@ -63,7 +65,7 @@ This document tracks the real implementation state of the repository and the hig
 - The next major step is deeper manual validation across multiple devices and a richer recovery UX on top of the hardened sync core
 - The repository now includes a dedicated `npm test` workflow for sync-risk regression coverage
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current 任意签 Windows artifact is generated as `dist/renyiqian-setup-1.0.0.exe`; `latest.yml` now points to the same filename for updater compatibility
+- The current 任意签 Windows artifact is generated as `dist/renyiqian-setup-1.2.2.exe`; `latest.yml` points to the same filename for updater compatibility
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet

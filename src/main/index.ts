@@ -26,6 +26,7 @@ import type { BoardDraft, CardDraft, CardMovePayload, ColumnDraft, ColumnMovePay
 import {
   FLOATING_LAUNCHER_BOUNDS,
   createFloatingWindowOptions,
+  getCollapsedLauncherPosition,
   getFloatingWindowBounds,
   getMovedWindowPosition,
   type FloatingWindowMode
@@ -36,6 +37,7 @@ import {
   getLocalOnlySyncFolderInfo,
   getLocalOnlySyncNotices
 } from './local-only-services'
+import { CANONICAL_USER_DATA_DIR_NAME, getCanonicalUserDataPath, migrateLegacyUserData } from './user-data'
 
 let mainWindow: BrowserWindow | null = null
 let updateManager: UpdateManager | null = null
@@ -49,7 +51,11 @@ const WINDOWS_STARTUP_APPROVED_KEY_USER = 'HKCU\\Software\\Microsoft\\Windows\\C
 const WINDOWS_STARTUP_APPROVED_KEY_MACHINE =
   'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run'
 
-app.setName('renyiqian')
+app.setName(CANONICAL_USER_DATA_DIR_NAME)
+
+if (process.platform === 'win32') {
+  app.setPath('userData', getCanonicalUserDataPath(app.getPath('appData')))
+}
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 
@@ -288,12 +294,28 @@ function setFloatingWindowMode(mode: FloatingWindowMode): void {
   }
 
   const bounds = getFloatingWindowBounds(mode)
-  const [x, y] = mainWindow.getPosition()
+  const currentBounds = mainWindow.getBounds()
+  const [x, y] =
+    mode === 'launcher'
+      ? getCollapsedLauncherPosition(currentBounds)
+      : [currentBounds.x, currentBounds.y]
   floatingWindowMode = mode
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+  }
   mainWindow.setResizable(mode === 'panel')
   mainWindow.setAlwaysOnTop(true)
-  mainWindow.setSize(bounds.width, bounds.height)
+  mainWindow.setBounds({
+    x,
+    y,
+    width: bounds.width,
+    height: bounds.height
+  })
   applyFloatingWindowShape(mainWindow, mode)
+  if (!mainWindow.isVisible()) {
+    mainWindow.show()
+  }
+  mainWindow.moveTop()
   setFloatingWindowState({
     mode,
     x,
@@ -356,6 +378,7 @@ function registerIpc(): void {
   })
   ipcMain.handle('window:minimize', () => {
     setFloatingWindowMode('launcher')
+    return getWindowState()
   })
   ipcMain.handle('window:toggleMaximize', () => {
     if (!mainWindow) {
@@ -404,9 +427,14 @@ if (hasSingleInstanceLock) {
     presentMainWindow()
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     Menu.setApplicationMenu(null)
-    initializeDatabase(app.getPath('userData'))
+    const userDataPath = app.getPath('userData')
+    await migrateLegacyUserData({
+      appDataPath: app.getPath('appData'),
+      targetUserDataPath: userDataPath
+    })
+    initializeDatabase(userDataPath)
     updateManager = new UpdateManager(app.getVersion(), app.isPackaged)
     cleanupDuplicateLaunchOnStartupEntries()
     applyLaunchOnStartupPreference(getLaunchOnStartupPreference())

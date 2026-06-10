@@ -91,19 +91,20 @@ O script faz fetch do remoto e atualiza com fast-forward only, mas se recusa a r
 
 ## Localizacao dos Dados Locais
 
-O Stickban persiste seu banco SQLite local em:
+A build desktop atual do Renyiqian persiste seu banco SQLite local em:
 
 ```text
-<userData>/data/stickban.db
+<userData>/data/renyiqian.db
 ```
 
 Locais tipicos:
 
-- App empacotado no Windows: `%APPDATA%/Stickban/data/stickban.db`
-- App empacotado no Linux: `~/.config/Stickban/data/stickban.db`
-- Execucao de desenvolvimento no Linux: `~/.config/Electron/data/stickban.db`
+- App empacotado no Windows: `%APPDATA%/renyiqian/data/renyiqian.db`
+- Builds antigas no Windows podem ter usado `%APPDATA%/任意签/data/renyiqian.db` ou `%APPDATA%/Stickban/data/stickban.db`; a migracao de startup copia esses bancos para o diretorio canonico `renyiqian` quando o novo diretorio ainda nao tem notas do usuario.
+- App empacotado no Linux: `~/.config/renyiqian/data/renyiqian.db`
+- Execucoes de desenvolvimento no Linux ainda podem usar um diretorio de user-data do Electron.
 
-No Linux em desenvolvimento, a pasta pode aparecer como `Electron` em vez de `Stickban` porque execucoes dev do Electron podem herdar o nome padrao do app antes do empacotamento.
+O caminho empacotado no Windows e mantido estavel entre reinstalacoes e atualizacoes para evitar perda aparente de notas quando o nome visivel do produto muda.
 
 ## Principios Centrais
 

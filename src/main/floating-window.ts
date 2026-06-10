@@ -37,6 +37,18 @@ export function getMovedWindowPosition(
   ]
 }
 
+export function getCollapsedLauncherPosition(currentBounds: {
+  x: number
+  y: number
+  width: number
+  height: number
+}): [number, number] {
+  return [
+    Math.round(currentBounds.x + (currentBounds.width - FLOATING_LAUNCHER_BOUNDS.width) / 2),
+    Math.round(currentBounds.y + (currentBounds.height - FLOATING_LAUNCHER_BOUNDS.height) / 2)
+  ]
+}
+
 export function createFloatingWindowOptions({
   preloadPath,
   mode = 'launcher'

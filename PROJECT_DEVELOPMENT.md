@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.0.0 for local Windows testing with a logo-only floating launcher, Windows startup control, and GitHub Releases remote-update support.
+Prepare 任意签 1.2.2 for a remote update that preserves existing local notes across reinstall/update paths and keeps the collapsed floating launcher visible after the panel is reduced.
 
 ## Current Status
 
@@ -36,6 +36,8 @@ Prepare 任意签 1.0.0 for local Windows testing with a logo-only floating laun
 | Startup toggle | Implemented | Renderer title bar now exposes a compact 开机启动 button backed by the existing Windows login-item IPC path. |
 | Remote update | Implemented locally | `electron-updater` is restored, packaged builds check GitHub Releases at startup, every 4 hours, and through a visible 检查更新 button. |
 | GitHub push | Done | `main` was pushed to `https://github.com/zsdd2/ryq`; `v1.0.0` tag was pushed as the first 任意签 release baseline. |
+| Stable local storage | Implemented | Windows packaged builds now pin `userData` to `%APPDATA%/renyiqian` and migrate legacy `%APPDATA%/任意签` / `%APPDATA%/Stickban` databases only when the canonical database is still pristine. |
+| Collapse visibility | Implemented | Panel-to-launcher collapse now restores/shows/raises the BrowserWindow and recenters the 88x88 launcher around the previous panel center. |
 
 ## Scope Boundary
 
@@ -334,6 +336,18 @@ Updated UI target:
   - `dist/renyiqian-setup-1.2.1.exe.blockmap`
   - `dist/latest.yml`
 - Verified `dist/latest.yml` points to `renyiqian-setup-1.2.1.exe`.
+
+## Latest Verification - Storage Migration And Launcher Restore
+
+- Investigated the reported reinstall/update data loss and found multiple Windows user-data directories on the machine: `%APPDATA%/renyiqian`, `%APPDATA%/任意签`, and `%APPDATA%/Stickban`.
+- Root cause: previous product-name/app-name changes could point Electron `userData` at a different directory, making existing notes appear missing after reinstall.
+- Added `src/main/user-data.ts` to pin the packaged Windows path to `%APPDATA%/renyiqian` and migrate legacy databases from `%APPDATA%/任意签/data/renyiqian.db` or `%APPDATA%/Stickban/data/stickban.db` only when the canonical database has no user notes.
+- Added regression tests that verify legacy data is copied into the canonical directory and that existing canonical notes are not overwritten.
+- Changed panel collapse to compute a centered 88x88 launcher position, then explicitly restore, show, raise, and persist the launcher window state.
+- Bumped package metadata to `1.2.2` for the next remote update.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 8 test files, 31 tests.
 
 ## Environment Notes
 
