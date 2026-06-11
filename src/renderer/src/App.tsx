@@ -27,6 +27,8 @@ import {
   formatTimerRemaining,
   getCompactTimerName,
   getSummaryFromHtml,
+  getTimerQuotaInputValue,
+  normalizeTimerQuota,
   resolveTimerDueAt,
   type NoteTimerRepeat,
   type NoteTimer,
@@ -440,7 +442,7 @@ function App(): JSX.Element {
     const nextTimer: NoteTimer = {
       id: editingTimerId ?? crypto.randomUUID(),
       name: timerName.trim() || '计时器',
-      quota: timerQuota.trim() || undefined,
+      quota: normalizeTimerQuota(timerQuota),
       dueAt,
       status: 'scheduled',
       repeat: timerRepeat
@@ -463,7 +465,7 @@ function App(): JSX.Element {
   function startEditingTimer(timer: NoteTimer): void {
     setEditingTimerId(timer.id)
     setTimerName(timer.name)
-    setTimerQuota(timer.quota ?? '')
+    setTimerQuota(getTimerQuotaInputValue(timer.quota))
     setTimerDueAt(formatDatetimeLocal(resolveTimerDueAt(timer, timerNow)))
     setTimerRepeat(timer.repeat ?? 'none')
   }
@@ -484,7 +486,7 @@ function App(): JSX.Element {
         ? {
             ...timer,
             name: timerName.trim() || '计时器',
-            quota: timerQuota.trim() || undefined,
+            quota: normalizeTimerQuota(timerQuota),
             dueAt,
             status: 'scheduled',
             repeat: timerRepeat
@@ -1060,9 +1062,13 @@ function App(): JSX.Element {
                     className="group-title-button"
                     onClick={(event) => {
                       event.stopPropagation()
+                      void selectGroup(group)
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation()
                       void renameGroup(group)
                     }}
-                    title="点击修改分组名称"
+                    title="单击切换分组，双击修改名称"
                   >
                     {group.title}
                   </button>
@@ -1236,11 +1242,17 @@ function App(): JSX.Element {
                   onChange={(event) => setTimerName(event.target.value)}
                   placeholder="计时器名称"
                 />
-                <input
-                  value={timerQuota}
-                  onChange={(event) => setTimerQuota(event.target.value)}
-                  placeholder="剩余额度"
-                />
+                <label className="timer-quota-field">
+                  <input
+                    type="number"
+                    min="0"
+                    value={timerQuota}
+                    onChange={(event) => setTimerQuota(event.target.value)}
+                    placeholder="剩余额度"
+                    aria-label="剩余额度百分比"
+                  />
+                  <span aria-hidden="true">%</span>
+                </label>
                 <input
                   type="datetime-local"
                   value={timerDueAt}

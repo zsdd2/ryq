@@ -75,14 +75,12 @@ export function buildTemplateNoteHtml(templateRowsText: string, templateColumnsT
 
 export function buildAccountMembershipTemplateHtml(quantity: number, customRows: string[] = []): string {
   const count = Math.max(1, Math.min(20, Math.floor(quantity)))
-  const baseRows = ['账号名称', '账号密码', '账号到期时间', '计时器', '其他内容', ...customRows.map((row) => row.trim()).filter(Boolean)]
+  const columns = ['账号名称', '账号密码', '账号到期时间', '计时器', ...customRows.map((row) => row.trim()).filter(Boolean)]
+  const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')
   const body = Array.from({ length: count }, (_, index) => {
-    const section = `<tr class="note-template-section"><th colspan="2">账号 ${index + 1}</th></tr>`
-    const rows = baseRows
-      .map((row) => `<tr><th scope="row">${escapeHtml(row)}</th><td><br></td></tr>`)
-      .join('')
-    return `${section}${rows}`
+    const cells = columns.map(() => '<td><br></td>').join('')
+    return `<tr class="account-template-row"><th scope="row">账号 ${index + 1}</th>${cells}</tr>`
   }).join('')
 
-  return `<table class="note-template-table account-template-table"><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody>${body}</tbody></table>`
+  return `<table class="note-template-table account-template-table"><thead><tr><th>序号</th>${header}</tr></thead><tbody>${body}</tbody></table>`
 }

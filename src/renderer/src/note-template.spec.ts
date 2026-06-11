@@ -53,10 +53,8 @@ describe('note template helpers', () => {
   it('builds multiple account membership sections by quantity', () => {
     const html = buildAccountMembershipTemplateHtml(2, ['安全问题'])
 
-    expect(html.match(/账号名称/g)).toHaveLength(2)
-    expect(html).toContain('账号密码')
-    expect(html).toContain('账号到期时间')
-    expect(html).toContain('计时器')
-    expect(html).toContain('安全问题')
+    expect(html).toContain('<th>序号</th><th>账号名称</th><th>账号密码</th><th>账号到期时间</th><th>计时器</th><th>安全问题</th>')
+    expect(html.match(/class="account-template-row"/g)).toHaveLength(2)
+    expect(html).not.toContain('note-template-section')
   })
 })

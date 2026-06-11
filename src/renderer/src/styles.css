@@ -979,6 +979,26 @@ button:disabled {
   font-size: 11px;
 }
 
+.timer-quota-field {
+  position: relative;
+  min-width: 0;
+}
+
+.timer-quota-field input {
+  width: 100%;
+  padding-right: 22px;
+}
+
+.timer-quota-field span {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .timer-form button {
   height: 30px;
   border-radius: 8px;

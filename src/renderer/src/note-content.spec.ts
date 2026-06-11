@@ -6,6 +6,8 @@ import {
   formatTimerRemaining,
   getCompactTimerName,
   getSummaryFromHtml,
+  getTimerQuotaInputValue,
+  normalizeTimerQuota,
   resolveTimerDueAt
 } from './note-content'
 
@@ -101,6 +103,14 @@ describe('note content helpers', () => {
   it('uses only the first four visible characters for timer card labels', () => {
     expect(getCompactTimerName('浏览器账号会员')).toBe('浏览器账')
     expect(getCompactTimerName('API')).toBe('API')
+  })
+
+  it('stores timer quota as a percentage while keeping the input numeric', () => {
+    expect(normalizeTimerQuota('30')).toBe('30%')
+    expect(normalizeTimerQuota('30%')).toBe('30%')
+    expect(normalizeTimerQuota('')).toBeUndefined()
+    expect(getTimerQuotaInputValue('30%')).toBe('30')
+    expect(getTimerQuotaInputValue('20次')).toBe('20')
   })
 
   it('resolves recurring timers to their next visible due date', () => {

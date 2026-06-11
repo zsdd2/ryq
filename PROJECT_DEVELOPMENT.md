@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.4.1 with safer group management, template panel layering, timer edit persistence, upward drag ordering, installer auto-launch, and a patch release.
+Prepare 任意签 1.4.2 with direct group switching, horizontal account membership tables, and percentage-based timer quota input.
 
 ## Current Status
 
@@ -50,6 +50,9 @@ Prepare 任意签 1.4.1 with safer group management, template panel layering, ti
 | Template panel layering | Implemented | Template generation panel now stays above existing note cards with a sticky action footer so generation controls remain clickable. |
 | Timer save behavior | Implemented | Editing a timer and clicking the note detail 保存 button now persists the pending timer edits. |
 | Patch release metadata | Done | Package metadata is 1.4.1, NSIS run-after-finish is enabled, and the Windows installer plus updater metadata were verified. |
+| Group title switching | Implemented | Single-clicking a group title switches the active group; double-clicking keeps direct rename available. |
+| Account membership table | Implemented | Account membership templates now generate a horizontal editable table with one account per row and fields as columns. |
+| Percentage quota input | Implemented | New and edited timer quotas use a numeric input with a fixed `%` suffix while legacy non-percent quota text remains readable. |
 
 ## Scope Boundary
 
@@ -409,6 +412,27 @@ Updated UI target:
   - `dist/renyiqian-setup-1.4.1.exe.blockmap`
   - `dist/latest.yml` points to `renyiqian-setup-1.4.1.exe`.
 - Packaged updater configuration still targets `zsdd2/ryq`.
+
+## Latest Verification - Group Switching, Account Table, And Percentage Quota
+
+- Fixed group-title click handling so a single click switches the active group instead of opening rename.
+- Kept title-based rename available on double-click without reintroducing a separate edit icon.
+- Rebuilt the account membership template as a horizontal table with `序号`, account fields, timer, and custom fields as columns.
+- Each requested account quantity now creates one editable table row.
+- Added percentage quota helpers so new and edited timer quotas are stored as `数字%` while the form displays a fixed `%` suffix.
+- Preserved legacy quota text such as counts instead of rewriting old local data.
+- Added regression tests for horizontal account tables and percentage quota formatting.
+- Package metadata is set to `1.4.2`.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 40 tests.
+  - `npm run dist:win`
+  - `codegraph sync` reported the index is up to date.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.2.exe`
+  - `dist/renyiqian-setup-1.4.2.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.2.exe`.
+- Native Electron interaction was not browser-DOM tested; behavior is covered by helper tests, typecheck, and packaged build verification.
 
 ## Environment Notes
 

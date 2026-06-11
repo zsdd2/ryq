@@ -113,6 +113,16 @@ export function formatTimerRemaining(dueAt: number, now = Date.now()): string {
   return `${prefix}${Math.max(1, Math.ceil(absoluteDelta / minute))}分`
 }
 
+export function normalizeTimerQuota(value: string): string | undefined {
+  const normalized = value.trim().replace(/%+$/, '').trim()
+  return normalized ? `${normalized}%` : undefined
+}
+
+export function getTimerQuotaInputValue(value: string | undefined): string {
+  const numericValue = value?.match(/\d+(?:\.\d+)?/)?.[0]
+  return numericValue ?? ''
+}
+
 export function buildNoteDescription({ html, pinned }: { html: string; pinned: boolean }): string {
   return buildNoteDescriptionWithTimers({ html, pinned, timers: [] })
 }
