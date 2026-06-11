@@ -8,8 +8,8 @@ describe('createFloatingWindowOptions', () => {
       preloadPath: 'preload.js'
     })
 
-    expect(options.width).toBe(88)
-    expect(options.height).toBe(88)
+    expect(options.width).toBe(59)
+    expect(options.height).toBe(59)
     expect(options.minWidth).toBeLessThanOrEqual(320)
     expect(options.minHeight).toBeLessThanOrEqual(360)
     expect(options.frame).toBe(false)
@@ -43,6 +43,6 @@ describe('createFloatingWindowOptions', () => {
   })
 
   it('collapses the panel back to a centered launcher position', () => {
-    expect(getCollapsedLauncherPosition({ x: 100, y: 80, width: 680, height: 520 })).toEqual([396, 296])
+    expect(getCollapsedLauncherPosition({ x: 100, y: 80, width: 680, height: 520 })).toEqual([411, 311])
   })
 })

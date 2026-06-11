@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   appendTemplateColumn,
   appendTemplateRow,
+  buildAccountMembershipTemplateHtml,
   buildTemplateNoteHtml,
   getDefaultNoteTemplates,
   normalizeTemplateColumns,
@@ -47,5 +48,15 @@ describe('note template helpers', () => {
     expect(accountTemplate?.rows).toContain('平台')
     expect(accountTemplate?.rows).toContain('会员到期')
     expect(buildTemplateNoteHtml(accountTemplate!.rows.join('\n'), accountTemplate!.columns.join('\n'))).toContain('会员到期')
+  })
+
+  it('builds multiple account membership sections by quantity', () => {
+    const html = buildAccountMembershipTemplateHtml(2, ['安全问题'])
+
+    expect(html.match(/账号名称/g)).toHaveLength(2)
+    expect(html).toContain('账号密码')
+    expect(html).toContain('账号到期时间')
+    expect(html).toContain('计时器')
+    expect(html).toContain('安全问题')
   })
 })

@@ -59,6 +59,8 @@ This document tracks the real implementation state of the repository and the hig
 - Collapsing the note panel back to launcher mode now explicitly restores, shows, raises, and centers the 88x88 logo launcher instead of letting the window stay hidden or shrink from an unsafe position
 - Note cards now clamp rich previews to two lines, show compact per-note countdown rows on the right side, support direct card-level pin toggling, and keep timer notices behind a small hoverable alert icon
 - The template panel now supports multiple reusable templates, including a custom table template and an account membership management template
+- Account membership templates can now generate multiple account sections at once, and timers now support a quota field plus edit-in-place updates from the note detail panel
+- The collapsed launcher is reduced to a 59x59 visible/clickable logo area, and note cards can be dragged to reorder within their pinned or unpinned section
 
 ## Current Implementation Focus
 
@@ -67,7 +69,7 @@ This document tracks the real implementation state of the repository and the hig
 - The next major step is deeper manual validation across multiple devices and a richer recovery UX on top of the hardened sync core
 - The repository now includes a dedicated `npm test` workflow for sync-risk regression coverage
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current 任意签 Windows artifact is generated as `dist/renyiqian-setup-1.2.3.exe`; `latest.yml` points to the same filename for updater compatibility
+- The current 任意签 Windows artifact is generated as `dist/renyiqian-setup-1.4.0.exe`; `latest.yml` points to the same filename for updater compatibility
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet

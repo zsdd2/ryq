@@ -35,6 +35,7 @@ import {
 import {
   appendTemplateColumn,
   appendTemplateRow,
+  buildAccountMembershipTemplateHtml,
   buildTemplateNoteHtml,
   getDefaultNoteTemplates,
   normalizeTemplateColumns,
@@ -63,10 +64,15 @@ function App(): JSX.Element {
   const [templateText, setTemplateText] = useState(DEFAULT_TEMPLATE_TEXT)
   const [templateColumnsText, setTemplateColumnsText] = useState(DEFAULT_TEMPLATE_COLUMNS_TEXT)
   const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_NOTE_TEMPLATES[0]?.id ?? 'custom-table')
+  const [accountTemplateCount, setAccountTemplateCount] = useState(1)
+  const [accountTemplateCustomText, setAccountTemplateCustomText] = useState('')
   const [timerName, setTimerName] = useState('')
+  const [timerQuota, setTimerQuota] = useState('')
   const [timerDueAt, setTimerDueAt] = useState('')
   const [timerRepeat, setTimerRepeat] = useState<NoteTimerRepeat>('none')
+  const [editingTimerId, setEditingTimerId] = useState<string | null>(null)
   const [timerNow, setTimerNow] = useState(() => Date.now())
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -120,16 +126,31 @@ function App(): JSX.Element {
       : selectedTemplate?.columns.join('\n') ?? templateColumnsText
   }
 
-  function getVisibleTimerRows(timers: NoteTimer[]): Array<{ id: string; name: string; remaining: string; title: string }> {
+  function getVisibleTimerRows(timers: NoteTimer[]): Array<{ id: string; name: string; quota: string; due: string; title: string }> {
     return timers.map((timer) => {
       const dueAt = resolveTimerDueAt(timer, timerNow)
       return {
         id: timer.id,
         name: getCompactTimerName(timer.name),
-        remaining: formatTimerRemaining(dueAt, timerNow),
-        title: `${timer.name} ${new Date(dueAt).toLocaleString()}`
+        quota: timer.quota?.trim() ?? '',
+        due: formatTimerRemaining(dueAt, timerNow),
+        title: `${timer.name}${timer.quota ? ` ${timer.quota}` : ''} ${new Date(dueAt).toLocaleString()}`
       }
     })
+  }
+
+  function getAccountTemplateCustomRows(): string[] {
+    return accountTemplateCustomText
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((row) => row.trim())
+      .filter(Boolean)
+  }
+
+  function formatDatetimeLocal(timestamp: number): string {
+    const date = new Date(timestamp)
+    const offsetMs = date.getTimezoneOffset() * 60 * 1000
+    return new Date(timestamp - offsetMs).toISOString().slice(0, 16)
   }
 
   async function refreshWorkspace(): Promise<void> {
@@ -313,13 +334,19 @@ function App(): JSX.Element {
       return
     }
 
-    const templateRows = normalizeTemplateRows(getTemplateRowsText())
+    const templateRows =
+      selectedTemplate?.id === 'account-membership'
+        ? ['账号名称']
+        : normalizeTemplateRows(getTemplateRowsText())
     if (templateRows.length === 0) {
       setError('请先设置模板表格项目')
       return
     }
 
-    const html = buildTemplateNoteHtml(getTemplateRowsText(), getTemplateColumnsText())
+    const html =
+      selectedTemplate?.id === 'account-membership'
+        ? buildAccountMembershipTemplateHtml(accountTemplateCount, getAccountTemplateCustomRows())
+        : buildTemplateNoteHtml(getTemplateRowsText(), getTemplateColumnsText())
     const title = selectedTemplate?.name ?? (getSummaryFromHtml(html).slice(0, 80) || '模板便签')
 
     setSaving(true)
@@ -391,21 +418,44 @@ function App(): JSX.Element {
     }
 
     const nextTimer: NoteTimer = {
-      id: crypto.randomUUID(),
+      id: editingTimerId ?? crypto.randomUUID(),
       name: timerName.trim() || '计时器',
+      quota: timerQuota.trim() || undefined,
       dueAt,
       status: 'scheduled',
       repeat: timerRepeat
     }
 
     setTimerName('')
+    setTimerQuota('')
     setTimerDueAt('')
     setTimerRepeat('none')
-    const inlineTimerHtml = `<p><span class="note-inline-timer" data-timer-id="${escapeHtml(nextTimer.id)}">⏱ ${escapeHtml(getCompactTimerName(nextTimer.name))}</span></p>`
-    await saveNote(note, `${getCurrentEditorHtml()}${inlineTimerHtml}`, note.pinned, [...note.timers, nextTimer])
+    setEditingTimerId(null)
+    const nextTimers = editingTimerId
+      ? note.timers.map((timer) => (timer.id === editingTimerId ? nextTimer : timer))
+      : [...note.timers, nextTimer]
+    const inlineTimerHtml = editingTimerId
+      ? ''
+      : `<p><span class="note-inline-timer" data-timer-id="${escapeHtml(nextTimer.id)}">⏱ ${escapeHtml(getCompactTimerName(nextTimer.name))}</span></p>`
+    await saveNote(note, `${getCurrentEditorHtml()}${inlineTimerHtml}`, note.pinned, nextTimers)
+  }
+
+  function startEditingTimer(timer: NoteTimer): void {
+    setEditingTimerId(timer.id)
+    setTimerName(timer.name)
+    setTimerQuota(timer.quota ?? '')
+    setTimerDueAt(formatDatetimeLocal(resolveTimerDueAt(timer, timerNow)))
+    setTimerRepeat(timer.repeat ?? 'none')
   }
 
   async function deleteTimer(note: NoteView, timerId: string): Promise<void> {
+    if (editingTimerId === timerId) {
+      setEditingTimerId(null)
+      setTimerName('')
+      setTimerQuota('')
+      setTimerDueAt('')
+      setTimerRepeat('none')
+    }
     await saveNote(
       note,
       getCurrentEditorHtml(),
@@ -425,6 +475,43 @@ function App(): JSX.Element {
       setError(deleteError instanceof Error ? deleteError.message : '删除便签失败')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function reorderNote(targetNote: NoteView): Promise<void> {
+    if (!draggingNoteId || trimmedSearchQuery) {
+      return
+    }
+
+    const draggedNote = notes.find((note) => note.id === draggingNoteId)
+    if (!draggedNote || draggedNote.id === targetNote.id) {
+      return
+    }
+
+    if (draggedNote.pinned !== targetNote.pinned) {
+      setError('置顶便签和普通便签不能混排')
+      return
+    }
+
+    const toIndex = notes.findIndex((note) => note.id === targetNote.id)
+    if (toIndex < 0) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    try {
+      const nextWorkspace = await window.stickban.moveCard({
+        cardId: draggedNote.id,
+        toColumnId: targetNote.columnId,
+        toIndex
+      })
+      setWorkspace(nextWorkspace)
+    } catch (moveError) {
+      setError(moveError instanceof Error ? moveError.message : '调整便签顺序失败')
+    } finally {
+      setSaving(false)
+      setDraggingNoteId(null)
     }
   }
 
@@ -806,6 +893,31 @@ function App(): JSX.Element {
               </button>
             ))}
           </div>
+          {selectedTemplate?.id === 'account-membership' ? (
+            <div className="account-template-options">
+              <label>
+                <span>生成数量</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={accountTemplateCount}
+                  onChange={(event) => setAccountTemplateCount(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
+                />
+              </label>
+              <label>
+                <span>其他自定义内容</span>
+                <textarea
+                  className="template-textarea"
+                  value={accountTemplateCustomText}
+                  onChange={(event) => setAccountTemplateCustomText(event.target.value)}
+                  placeholder={`例如：恢复邮箱
+安全问题
+备注`}
+                />
+              </label>
+            </div>
+          ) : null}
           {selectedTemplate?.id === 'custom-table' ? (
             <div className="template-grid">
               <label>
@@ -894,7 +1006,27 @@ function App(): JSX.Element {
             <div className="empty-state">正在搜索</div>
           ) : visibleNotes.length > 0 ? (
             visibleNotes.map((note) => (
-              <article className={note.pinned ? 'note-card pinned' : 'note-card'} key={note.id}>
+              <article
+                className={note.pinned ? 'note-card pinned' : 'note-card'}
+                key={note.id}
+                draggable={!trimmedSearchQuery}
+                onDragStart={(event) => {
+                  setDraggingNoteId(note.id)
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', note.id)
+                }}
+                onDragOver={(event) => {
+                  if (draggingNoteId && draggingNoteId !== note.id && !trimmedSearchQuery) {
+                    event.preventDefault()
+                    event.dataTransfer.dropEffect = 'move'
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  void reorderNote(note)
+                }}
+                onDragEnd={() => setDraggingNoteId(null)}
+              >
                 <button type="button" className="note-pin" onClick={() => void togglePinned(note)} aria-label={note.pinned ? '取消置顶' : '置顶便签'}>
                   {note.pinned ? <Pin size={14} /> : <PinOff size={14} />}
                 </button>
@@ -907,7 +1039,7 @@ function App(): JSX.Element {
                     {getVisibleTimerRows(note.timers).map((timer) => (
                       <div className="note-timer-row" key={timer.id} title={timer.title}>
                         <span>{timer.name}</span>
-                        <strong>{timer.remaining}</strong>
+                        <strong>{timer.quota ? `${timer.quota} ` : ''}{timer.due}</strong>
                       </div>
                     ))}
                   </div>
@@ -989,12 +1121,17 @@ function App(): JSX.Element {
                       <div>
                         <strong>{timer.name}</strong>
                         <span>
-                          {formatTimerRemaining(resolveTimerDueAt(timer, timerNow), timerNow)} · {new Date(resolveTimerDueAt(timer, timerNow)).toLocaleString()}
+                          {timer.quota ? `${timer.quota} · ` : ''}{formatTimerRemaining(resolveTimerDueAt(timer, timerNow), timerNow)} · {new Date(resolveTimerDueAt(timer, timerNow)).toLocaleString()}
                         </span>
                       </div>
-                      <button type="button" onClick={() => void deleteTimer(selectedNote, timer.id)} aria-label="删除计时器">
-                        <Trash2 size={13} />
-                      </button>
+                      <div className="timer-item-actions">
+                        <button type="button" onClick={() => startEditingTimer(timer)} aria-label="编辑计时器">
+                          <Pencil size={13} />
+                        </button>
+                        <button type="button" onClick={() => void deleteTimer(selectedNote, timer.id)} aria-label="删除计时器">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1008,6 +1145,11 @@ function App(): JSX.Element {
                   placeholder="计时器名称"
                 />
                 <input
+                  value={timerQuota}
+                  onChange={(event) => setTimerQuota(event.target.value)}
+                  placeholder="剩余额度"
+                />
+                <input
                   type="datetime-local"
                   value={timerDueAt}
                   onChange={(event) => setTimerDueAt(event.target.value)}
@@ -1019,7 +1161,7 @@ function App(): JSX.Element {
                   <option value="monthly">每月</option>
                 </select>
                 <button type="button" onClick={() => void addTimer(selectedNote)}>
-                  添加
+                  {editingTimerId ? '保存' : '添加'}
                 </button>
               </div>
             </section>

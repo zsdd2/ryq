@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.2.3 with tighter note cards, group management, card-level countdown visibility, direct pinning, quieter tooltip-style notices, and reusable template-note choices.
+Prepare 任意签 1.4.0 with multi-account membership templates, editable quota timers, smaller floating launcher bounds, and card drag ordering.
 
 ## Current Status
 
@@ -42,6 +42,10 @@ Prepare 任意签 1.2.3 with tighter note cards, group management, card-level co
 | Group management | Implemented | Sidebar groups now expose rename and delete actions using the existing board update/delete IPC. |
 | Countdown cards | Implemented | Each note card shows compact countdown rows on the right, with four-character names and one-unit remaining/overdue time. |
 | Template choices | Implemented | Template panel now supports multiple reusable templates and includes an account membership management template alongside the custom table template. |
+| Account template quantity | Implemented | Account membership template can generate multiple account sections in one note and accepts additional custom rows. |
+| Timer quota and editing | Implemented | Note timers now store a remaining-quota field and can be edited from the existing timer list. |
+| Smaller floating launcher | Implemented | Collapsed launcher bounds and rendered logo were reduced from 88x88 to 59x59, including the shaped click region. |
+| Card drag ordering | Implemented | Note cards can be dragged to change display order inside the active group while pinned notes remain separated above regular notes. |
 
 ## Scope Boundary
 
@@ -367,6 +371,19 @@ Updated UI target:
 - Verification passed:
   - `npm run typecheck`
   - `npm test` passed: 8 test files, 35 tests.
+
+## Latest Verification - Account Templates, Timer Quotas, And Drag Ordering
+
+- Updated account membership templates so one template note can contain multiple account sections based on the requested quantity.
+- Changed account template fields to focus on account name, account password, account expiry time, timer, and optional custom rows.
+- Extended note timers with an optional quota field and added edit-in-place behavior for existing timers.
+- Updated card timer display to show compact timer name, quota, and one-unit due/remaining time on the right side of the card.
+- Reduced the floating launcher visible and clickable area to `59x59`.
+- Added drag-and-drop note card ordering within the active group. Pinned cards remain in the top section and are not mixed with regular cards.
+- Bumped package metadata to `1.4.0` to align with the remote release workflow's next feature version.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 8 test files, 36 tests.
 
 ## Environment Notes
 

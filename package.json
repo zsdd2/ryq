@@ -1,7 +1,7 @@
 {
   "name": "renyiqian",
   "productName": "任意签",
-  "version": "1.2.3",
+  "version": "1.4.0",
   "description": "A floating desktop note app.",
   "main": "out/main/index.js",
   "author": "Ivan Yort <ivan.yort@gmail.com>",

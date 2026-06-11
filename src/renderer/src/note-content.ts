@@ -14,6 +14,7 @@ export type NoteTimerRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
 export interface NoteTimer {
   id: string
   name: string
+  quota?: string
   dueAt: number
   status: 'scheduled' | 'fired'
   repeat?: NoteTimerRepeat
@@ -171,6 +172,7 @@ function normalizeTimers(value: unknown): NoteTimer[] {
     .map((timer) => ({
       id: typeof timer.id === 'string' ? timer.id : crypto.randomUUID(),
       name: typeof timer.name === 'string' && timer.name.trim() ? timer.name.trim() : '计时器',
+      quota: typeof timer.quota === 'string' && timer.quota.trim() ? timer.quota.trim() : undefined,
       dueAt: typeof timer.dueAt === 'number' ? timer.dueAt : Date.now(),
       status: timer.status === 'fired' ? 'fired' : 'scheduled',
       repeat:

@@ -58,6 +58,7 @@ describe('note content helpers', () => {
         {
           id: 'timer-1',
           name: 'First reminder',
+          quota: '20次',
           dueAt: 1780000000000,
           status: 'scheduled'
         },
@@ -83,6 +84,7 @@ describe('note content helpers', () => {
     expect(note.timers[0]).toMatchObject({
       id: 'timer-1',
       name: 'First reminder',
+      quota: '20次',
       status: 'scheduled'
     })
   })
