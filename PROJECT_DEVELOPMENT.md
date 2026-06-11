@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.4.0 with multi-account membership templates, editable quota timers, smaller floating launcher bounds, and card drag ordering.
+Prepare 任意签 1.4.1 with safer group management, template panel layering, timer edit persistence, upward drag ordering, installer auto-launch, and a patch release.
 
 ## Current Status
 
@@ -46,6 +46,10 @@ Prepare 任意签 1.4.0 with multi-account membership templates, editable quota 
 | Timer quota and editing | Implemented | Note timers now store a remaining-quota field and can be edited from the existing timer list. |
 | Smaller floating launcher | Implemented | Collapsed launcher bounds and rendered logo were reduced from 88x88 to 59x59, including the shaped click region. |
 | Card drag ordering | Implemented | Note cards can be dragged to change display order inside the active group while pinned notes remain separated above regular notes. |
+| Group selection delete | Implemented | Sidebar now has a 便签分组 header, per-group selection checkboxes, top-right selected-group delete, confirm-before-delete, and click-title rename. |
+| Template panel layering | Implemented | Template generation panel now stays above existing note cards with a sticky action footer so generation controls remain clickable. |
+| Timer save behavior | Implemented | Editing a timer and clicking the note detail 保存 button now persists the pending timer edits. |
+| Patch release metadata | Done | Package metadata is 1.4.1, NSIS run-after-finish is enabled, and the Windows installer plus updater metadata were verified. |
 
 ## Scope Boundary
 
@@ -384,6 +388,27 @@ Updated UI target:
 - Verification passed:
   - `npm run typecheck`
   - `npm test` passed: 8 test files, 36 tests.
+
+## Latest Verification - Group Delete, Template Layering, Timer Save, And Upward Drag
+
+- Changed the left sidebar group controls to a dedicated `便签分组` header with selection checkboxes and a single top-right delete action.
+- Group deletion now requires a confirmation dialog, supports selected groups, and prevents deleting the last remaining group.
+- Group rename now starts by clicking the group title directly instead of using a separate edit icon.
+- Raised the template generation panel above note cards and made its action footer sticky so existing notes cannot cover the generate button.
+- Changed note card timer rows to three aligned fields: timer name, remaining quota, and compact remaining/overdue time.
+- Changed note detail saving so pending timer edits are included when the bottom `保存` button is clicked.
+- Added `src/renderer/src/note-order.ts` and tests for upward and downward note drag target indexes.
+- Enabled installer launch-after-finish and bumped package metadata to `1.4.1`.
+- Verification passed:
+  - `codegraph sync` reported the index is up to date.
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 39 tests.
+  - `npm run dist:win`
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.1.exe`
+  - `dist/renyiqian-setup-1.4.1.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.1.exe`.
+- Packaged updater configuration still targets `zsdd2/ryq`.
 
 ## Environment Notes
 

@@ -18,7 +18,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  runAfterFinish: false
+  runAfterFinish: true
 artifactName: renyiqian-setup-${version}.${ext}
 publish:
   - provider: github

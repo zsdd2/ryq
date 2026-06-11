@@ -41,6 +41,7 @@ import {
   normalizeTemplateColumns,
   normalizeTemplateRows
 } from './note-template'
+import { getNoteDropIndex, type DropPlacement } from './note-order'
 
 const TEMPLATE_STORAGE_KEY = 'renyiqian.noteTemplateText'
 const TEMPLATE_COLUMNS_STORAGE_KEY = 'renyiqian.noteTemplateColumnsText'
@@ -64,6 +65,7 @@ function App(): JSX.Element {
   const [templateText, setTemplateText] = useState(DEFAULT_TEMPLATE_TEXT)
   const [templateColumnsText, setTemplateColumnsText] = useState(DEFAULT_TEMPLATE_COLUMNS_TEXT)
   const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_NOTE_TEMPLATES[0]?.id ?? 'custom-table')
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([])
   const [accountTemplateCount, setAccountTemplateCount] = useState(1)
   const [accountTemplateCustomText, setAccountTemplateCustomText] = useState('')
   const [timerName, setTimerName] = useState('')
@@ -263,6 +265,12 @@ function App(): JSX.Element {
     }
   }
 
+  function toggleGroupSelection(groupId: string): void {
+    setSelectedGroupIds((currentIds) =>
+      currentIds.includes(groupId) ? currentIds.filter((selectedId) => selectedId !== groupId) : [...currentIds, groupId]
+    )
+  }
+
   async function renameGroup(group: BoardSummary): Promise<void> {
     const title = window.prompt('修改分组名称', group.title)?.trim()
     if (!title || title === group.title) {
@@ -281,21 +289,33 @@ function App(): JSX.Element {
     }
   }
 
-  async function removeGroup(group: BoardSummary): Promise<void> {
-    if (groups.length <= 1) {
+  async function removeSelectedGroups(): Promise<void> {
+    const selectedGroups = groups.filter((group) => selectedGroupIds.includes(group.id))
+    if (selectedGroups.length === 0) {
+      return
+    }
+
+    if (groups.length - selectedGroups.length < 1) {
       setError('至少保留一个分组')
       return
     }
 
-    if (!window.confirm(`删除分组“${group.title}”？分组内便签也会删除。`)) {
+    const selectedNames = selectedGroups.map((group) => group.title).join('、')
+    if (!window.confirm(`删除分组“${selectedNames}”？分组内便签也会删除。`)) {
       return
     }
 
     setSaving(true)
     setError(null)
     try {
-      const nextWorkspace = await window.stickban.deleteBoard(group.id)
-      setWorkspace(nextWorkspace)
+      let nextWorkspace: WorkspaceRecord | null = null
+      for (const group of selectedGroups) {
+        nextWorkspace = await window.stickban.deleteBoard(group.id)
+      }
+      if (nextWorkspace) {
+        setWorkspace(nextWorkspace)
+      }
+      setSelectedGroupIds([])
       setSelectedNote(null)
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : '删除分组失败')
@@ -448,6 +468,45 @@ function App(): JSX.Element {
     setTimerRepeat(timer.repeat ?? 'none')
   }
 
+  function getPendingTimerEdit(note: NoteView): NoteTimer[] | null {
+    if (!editingTimerId) {
+      return note.timers
+    }
+
+    const dueAt = new Date(timerDueAt).getTime()
+    if (!Number.isFinite(dueAt) || dueAt <= Date.now()) {
+      setError('请选择一个未来提醒时间')
+      return null
+    }
+
+    return note.timers.map((timer) =>
+      timer.id === editingTimerId
+        ? {
+            ...timer,
+            name: timerName.trim() || '计时器',
+            quota: timerQuota.trim() || undefined,
+            dueAt,
+            status: 'scheduled',
+            repeat: timerRepeat
+          }
+        : timer
+    )
+  }
+
+  async function saveSelectedNote(note: NoteView): Promise<void> {
+    const timers = getPendingTimerEdit(note)
+    if (!timers) {
+      return
+    }
+
+    setEditingTimerId(null)
+    setTimerName('')
+    setTimerQuota('')
+    setTimerDueAt('')
+    setTimerRepeat('none')
+    await saveNote(note, getCurrentEditorHtml(), note.pinned, timers, { closeAfterSave: true })
+  }
+
   async function deleteTimer(note: NoteView, timerId: string): Promise<void> {
     if (editingTimerId === timerId) {
       setEditingTimerId(null)
@@ -478,7 +537,7 @@ function App(): JSX.Element {
     }
   }
 
-  async function reorderNote(targetNote: NoteView): Promise<void> {
+  async function reorderNote(targetNote: NoteView, placement: DropPlacement): Promise<void> {
     if (!draggingNoteId || trimmedSearchQuery) {
       return
     }
@@ -493,8 +552,8 @@ function App(): JSX.Element {
       return
     }
 
-    const toIndex = notes.findIndex((note) => note.id === targetNote.id)
-    if (toIndex < 0) {
+    const toIndex = getNoteDropIndex(notes, draggedNote.id, targetNote.id, placement)
+    if (toIndex === null) {
       return
     }
 
@@ -668,6 +727,14 @@ function App(): JSX.Element {
   useEffect(() => {
     window.localStorage.setItem(TEMPLATE_SELECTED_STORAGE_KEY, selectedTemplateId)
   }, [selectedTemplateId])
+
+  useEffect(() => {
+    const groupIds = new Set(groups.map((group) => group.id))
+    setSelectedGroupIds((currentIds) => {
+      const nextIds = currentIds.filter((groupId) => groupIds.has(groupId))
+      return nextIds.length === currentIds.length ? currentIds : nextIds
+    })
+  }, [workspace?.boards])
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -964,20 +1031,42 @@ function App(): JSX.Element {
 
       <div className="note-workspace">
         <aside className="group-sidebar" aria-label="便签分组">
+          <div className="group-sidebar-header">
+            <span>便签分组</span>
+            <button
+              type="button"
+              className="group-delete-selected"
+              onClick={() => void removeSelectedGroups()}
+              disabled={selectedGroupIds.length === 0 || saving}
+              aria-label="删除选中分组"
+              title={selectedGroupIds.length > 0 ? '删除选中分组' : '先勾选要删除的分组'}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
           <div className="group-list">
             {groups.map((group) => (
               <div className={group.id === workspace?.activeBoardId ? 'group-item active' : 'group-item'} key={group.id}>
-                <button type="button" className="group-main" onClick={() => void selectGroup(group)}>
-                  <span>{group.title}</span>
+                <input
+                  type="checkbox"
+                  className="group-select"
+                  checked={selectedGroupIds.includes(group.id)}
+                  onChange={() => toggleGroupSelection(group.id)}
+                  aria-label={`选择分组 ${group.title}`}
+                />
+                <div className="group-main" onClick={() => void selectGroup(group)} role="button" tabIndex={0}>
+                  <button
+                    type="button"
+                    className="group-title-button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void renameGroup(group)
+                    }}
+                    title="点击修改分组名称"
+                  >
+                    {group.title}
+                  </button>
                   <small>{group.cardCount}</small>
-                </button>
-                <div className="group-actions">
-                  <button type="button" onClick={() => void renameGroup(group)} aria-label="修改分组名称">
-                    <Pencil size={11} />
-                  </button>
-                  <button type="button" onClick={() => void removeGroup(group)} aria-label="删除分组">
-                    <Trash2 size={11} />
-                  </button>
                 </div>
               </div>
             ))}
@@ -1023,7 +1112,9 @@ function App(): JSX.Element {
                 }}
                 onDrop={(event) => {
                   event.preventDefault()
-                  void reorderNote(note)
+                  const cardBounds = event.currentTarget.getBoundingClientRect()
+                  const placement = event.clientY > cardBounds.top + cardBounds.height / 2 ? 'after' : 'before'
+                  void reorderNote(note, placement)
                 }}
                 onDragEnd={() => setDraggingNoteId(null)}
               >
@@ -1038,8 +1129,9 @@ function App(): JSX.Element {
                   <div className="note-timer-stack" aria-label="倒计时">
                     {getVisibleTimerRows(note.timers).map((timer) => (
                       <div className="note-timer-row" key={timer.id} title={timer.title}>
-                        <span>{timer.name}</span>
-                        <strong>{timer.quota ? `${timer.quota} ` : ''}{timer.due}</strong>
+                        <span className="timer-card-name">{timer.name}</span>
+                        <span className="timer-card-quota">{timer.quota || '-'}</span>
+                        <strong>{timer.due}</strong>
                       </div>
                     ))}
                   </div>
@@ -1170,7 +1262,7 @@ function App(): JSX.Element {
               <button type="button" className="secondary-action" onClick={() => setSelectedNote(null)}>
                 取消
               </button>
-              <button type="button" className="primary-action" onClick={() => void saveNote(selectedNote, getCurrentEditorHtml(), selectedNote.pinned, selectedNote.timers, { closeAfterSave: true })}>
+              <button type="button" className="primary-action" onClick={() => void saveSelectedNote(selectedNote)}>
                 保存
               </button>
             </footer>
