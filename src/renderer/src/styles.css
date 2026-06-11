@@ -188,6 +188,18 @@ button:disabled {
   font-weight: 800;
 }
 
+.title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.title-version {
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 750;
+}
+
 .subtitle {
   margin-top: 1px;
   max-width: 430px;
@@ -250,7 +262,7 @@ button:disabled {
 .quick-add {
   display: grid;
   gap: 8px;
-  padding: 6px 12px 10px;
+  padding: 0 12px 10px;
 }
 
 .quick-add.expanded {
@@ -304,7 +316,7 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 30px;
   gap: 6px;
-  padding: 0 12px 10px;
+  padding: 6px 12px;
 }
 
 .global-search input {
@@ -731,7 +743,7 @@ button:disabled {
 
 .note-card {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(170px, 185px) 24px;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(132px, 145px) 24px;
   align-items: start;
   gap: 7px;
   min-height: 66px;
@@ -837,13 +849,13 @@ button:disabled {
 
 .note-timer-row {
   display: grid;
-  grid-template-columns: minmax(42px, 1fr) 38px 43px 16px;
+  grid-template-columns: minmax(32px, 1fr) 30px 38px 14px;
   align-items: center;
-  column-gap: 4px;
+  column-gap: 3px;
   min-height: 23px;
   border-radius: 7px;
   background: rgb(237 244 255 / 78%);
-  padding: 3px 4px;
+  padding: 3px;
   color: var(--blue);
 }
 
@@ -854,7 +866,7 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 750;
 }
 
@@ -880,15 +892,15 @@ button:disabled {
 }
 
 .note-timer-row strong {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 850;
   text-align: right;
   white-space: nowrap;
 }
 
 .timer-card-refresh {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: grid;
   place-items: center;
   border-radius: 5px;

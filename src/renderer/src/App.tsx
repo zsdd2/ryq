@@ -980,7 +980,10 @@ function App(): JSX.Element {
         <div className="title-drag-region">
           <img className="app-logo" src={renyiqianLogoUrl} alt="" aria-hidden="true" />
           <div>
-            <div className="title">任意签</div>
+            <div className="title-line">
+              <div className="title">任意签</div>
+              {windowState?.appVersion ? <span className="title-version">v{windowState.appVersion}</span> : null}
+            </div>
             <div className="subtitle">{saving ? '正在保存' : '随手打开、随手记录、随时看见的桌面便签中心'}</div>
           </div>
         </div>
@@ -1032,6 +1035,19 @@ function App(): JSX.Element {
         </div>
       </header>
 
+      <section className="global-search" aria-label="全局搜索">
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="全局搜索所有分组和便签"
+        />
+        {trimmedSearchQuery ? (
+          <button type="button" onClick={() => setSearchQuery('')} aria-label="清空搜索">
+            <X size={13} />
+          </button>
+        ) : null}
+      </section>
+
       <section className={showQuickAddInput ? 'quick-add expanded' : 'quick-add collapsed'}>
         {showQuickAddInput ? (
           <input
@@ -1067,19 +1083,6 @@ function App(): JSX.Element {
         <button type="button" className="template-toggle" onClick={() => setShowTemplatePanel((currentValue) => !currentValue)}>
           模板
         </button>
-      </section>
-
-      <section className="global-search" aria-label="全局搜索">
-        <input
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="全局搜索所有分组和便签"
-        />
-        {trimmedSearchQuery ? (
-          <button type="button" onClick={() => setSearchQuery('')} aria-label="清空搜索">
-            <X size={13} />
-          </button>
-        ) : null}
       </section>
 
       {error ? (

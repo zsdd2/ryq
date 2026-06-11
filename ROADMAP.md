@@ -52,6 +52,21 @@ Goals and milestones:
 - Richer sync conflict inspection and recovery UX
 - Mobile companion app
 
+## Near-Term Renyiqian Utility Improvements
+
+Status: `planned`
+
+Recommended by implementation speed and daily usefulness:
+
+1. Global shortcut to open the floating panel and focus quick note entry.
+2. One-click copy for a full note or account field values.
+3. Duplicate a note as a starting point for similar records.
+4. Undo delete and a small local recycle bin for accidental removals.
+5. Reminder snooze actions for 5, 10, and 30 minutes.
+6. Paste clipboard rows into table/account templates for batch entry.
+
+These remain local-only features and do not introduce accounts, cloud services, or external infrastructure.
+
 ## Notes
 
 - This file tracks future direction and active priorities.

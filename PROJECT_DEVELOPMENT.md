@@ -510,6 +510,35 @@ Updated UI target:
 
 - Verify the GitHub `v1.4.5` updater artifacts after the release workflow completes.
 
+## Current Modification Goal - Compact Timer Quarter And Version Label
+
+- Reduce the note-card timer area from roughly one third to roughly one quarter of the available card width.
+- Move global search above quick note entry.
+- Display the runtime application version beside `任意签`.
+- Record six low-effort, high-value local feature recommendations without expanding this release scope.
+- Publish the changes as version `1.4.6`.
+
+## Current Status
+
+- Timer layout target is reduced to `132-145px` with tighter name, quota, remaining-time, and refresh columns.
+- Global search is positioned before quick note entry in the renderer flow.
+- The title bar reads the real packaged version from `WindowState.appVersion`.
+- Added source-level layout regression coverage for ordering, version display, and timer width.
+- Added the six recommended local utility features to `ROADMAP.md`.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 10 test files, 47 tests.
+  - `npm run dist:win`
+  - `codegraph sync` reported the index is up to date.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.6.exe`
+  - `dist/renyiqian-setup-1.4.6.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.6.exe`.
+
+## Future Modification Plan
+
+- Push version `1.4.6` and verify GitHub updater artifacts.
+
 ## Environment Notes
 
 - Use the project-local Node runtime for this checkout:
