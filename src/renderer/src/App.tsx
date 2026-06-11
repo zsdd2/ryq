@@ -71,6 +71,8 @@ function App(): JSX.Element {
   const [searchResults, setSearchResults] = useState<NoteSearchResult[]>([])
   const [windowState, setWindowState] = useState<WindowState | null>(null)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null)
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null)
   const [selectedNote, setSelectedNote] = useState<NoteView | null>(null)
   const [showTemplatePanel, setShowTemplatePanel] = useState(false)
   const [templateText, setTemplateText] = useState(DEFAULT_TEMPLATE_TEXT)
@@ -130,6 +132,10 @@ function App(): JSX.Element {
   const visibleNotes = trimmedSearchQuery ? searchNotes : notes
   const selectedTemplate =
     DEFAULT_NOTE_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? DEFAULT_NOTE_TEMPLATES[0]
+  const updateProgress = updateStatus?.downloadProgressPercent ?? null
+  const canDownloadUpdate = updateStatus?.phase === 'available'
+  const canInstallUpdate = updateStatus?.phase === 'downloaded'
+  const isDownloadingUpdate = updateStatus?.phase === 'downloading'
 
   function getTemplateRowsText(): string {
     return selectedTemplate?.id === 'custom-table' ? templateText : selectedTemplate?.rows.join('\n') ?? templateText
@@ -199,48 +205,61 @@ function App(): JSX.Element {
 
   async function checkForUpdates(): Promise<void> {
     setSaving(true)
-    setError(null)
+    setUpdateNotice(null)
     try {
-      if (updateStatus?.phase === 'downloaded') {
-        await window.stickban.quitAndInstallUpdate()
-        return
-      }
-
-      if (updateStatus?.phase === 'available') {
-        setError(`正在下载新版本 ${updateStatus.availableUpdate?.version ?? ''}`)
-        const downloadedStatus = await window.stickban.downloadUpdate()
-        setUpdateStatus(downloadedStatus)
-        if (downloadedStatus.phase === 'downloaded') {
-          setError(`新版本 ${downloadedStatus.downloadedUpdate?.version ?? updateStatus.availableUpdate?.version ?? ''} 已下载，点击“安装更新”重启安装`)
-        } else if (downloadedStatus.phase === 'error') {
-          setError(downloadedStatus.lastError?.message ?? '下载更新失败')
-        }
-        return
-      }
-
       const nextUpdateStatus = await window.stickban.checkForUpdates()
       setUpdateStatus(nextUpdateStatus)
       if (!nextUpdateStatus.supported) {
-        setError('远程升级需要安装后的正式版本使用')
+        setUpdateNotice('远程升级需要安装后的正式版本使用')
       } else if (nextUpdateStatus.phase === 'up-to-date') {
-        setError('当前已经是最新版本')
+        setUpdateNotice('当前已经是最新版本')
       } else if (nextUpdateStatus.phase === 'available') {
-        setError(`发现新版本 ${nextUpdateStatus.availableUpdate?.version ?? ''}，正在下载`)
-        const downloadedStatus = await window.stickban.downloadUpdate()
-        setUpdateStatus(downloadedStatus)
-        if (downloadedStatus.phase === 'downloaded') {
-          setError(`新版本 ${downloadedStatus.downloadedUpdate?.version ?? nextUpdateStatus.availableUpdate?.version ?? ''} 已下载，点击“安装更新”重启安装`)
-        } else if (downloadedStatus.phase === 'error') {
-          setError(downloadedStatus.lastError?.message ?? '下载更新失败')
-        }
+        setUpdateNotice(`发现新版本 ${nextUpdateStatus.availableUpdate?.version ?? ''}`)
       } else if (nextUpdateStatus.phase === 'downloaded') {
-        await window.stickban.quitAndInstallUpdate()
+        setUpdateNotice(`新版本 ${nextUpdateStatus.downloadedUpdate?.version ?? ''} 已下载`)
       } else if (nextUpdateStatus.phase === 'error') {
-        setError(nextUpdateStatus.lastError?.message ?? '检查更新失败')
+        setUpdateNotice(nextUpdateStatus.lastError?.message ?? '检查更新失败')
       }
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '检查更新失败')
+      setUpdateNotice(updateError instanceof Error ? updateError.message : '检查更新失败')
     } finally {
+      setSaving(false)
+    }
+  }
+
+  async function downloadAvailableUpdate(): Promise<void> {
+    if (updateStatus?.phase === 'downloaded') {
+      await window.stickban.quitAndInstallUpdate()
+      return
+    }
+
+    if (updateStatus?.phase !== 'available') {
+      return
+    }
+
+    setSaving(true)
+    setUpdateNotice(`正在下载新版本 ${updateStatus.availableUpdate?.version ?? ''}`)
+    let disposed = false
+    const progressTimer = window.setInterval(() => {
+      void window.stickban.getUpdateStatus().then((nextStatus) => {
+        if (!disposed) {
+          setUpdateStatus(nextStatus)
+        }
+      })
+    }, 700)
+    try {
+      const downloadedStatus = await window.stickban.downloadUpdate()
+      setUpdateStatus(downloadedStatus)
+      if (downloadedStatus.phase === 'downloaded') {
+        setUpdateNotice(`新版本 ${downloadedStatus.downloadedUpdate?.version ?? updateStatus.availableUpdate?.version ?? ''} 已下载`)
+      } else if (downloadedStatus.phase === 'error') {
+        setUpdateNotice(downloadedStatus.lastError?.message ?? '下载更新失败')
+      }
+    } catch (downloadError) {
+      setUpdateNotice(downloadError instanceof Error ? downloadError.message : '下载更新失败')
+    } finally {
+      disposed = true
+      window.clearInterval(progressTimer)
       setSaving(false)
     }
   }
@@ -842,7 +861,7 @@ function App(): JSX.Element {
       })
 
       void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers, { keepDialogOpen: false })
-      setError(`便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`)
+      setReminderNotice(`便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`)
     }, 10000)
 
     return () => {
@@ -934,13 +953,28 @@ function App(): JSX.Element {
           </button>
           <button
             type="button"
-            className={updateStatus?.phase === 'downloaded' ? 'text-action active' : 'text-action'}
+            className="text-action"
             onClick={() => void checkForUpdates()}
             disabled={saving}
             aria-label="检查更新"
           >
             <Download size={13} />
-            <span>{updateStatus?.phase === 'downloaded' ? '安装更新' : '检查更新'}</span>
+            <span>检查更新</span>
+          </button>
+          <button
+            type="button"
+            className={canInstallUpdate ? 'text-action active' : 'text-action'}
+            onClick={() => void downloadAvailableUpdate()}
+            disabled={saving || isDownloadingUpdate || (!canDownloadUpdate && !canInstallUpdate)}
+            aria-label={canInstallUpdate ? '安装更新' : '下载更新'}
+          >
+            <span>
+              {canInstallUpdate
+                ? '安装更新'
+                : isDownloadingUpdate
+                  ? `${updateProgress ?? 0}%`
+                  : '下载更新'}
+            </span>
           </button>
           <button type="button" className="icon-button" onClick={() => void window.stickban.setAlwaysOnTop(true)} aria-label="保持置顶">
             <Pin size={14} />
@@ -990,6 +1024,34 @@ function App(): JSX.Element {
       {error ? (
         <button type="button" className="status-indicator" title={error} aria-label={error} onClick={() => setError(null)}>
           <AlertCircle size={14} />
+        </button>
+      ) : null}
+
+      {(updateNotice || isDownloadingUpdate || canInstallUpdate) ? (
+        <div className="update-notice" role="status">
+          <div className="update-notice-row">
+            <Download size={13} />
+            <span>
+              {isDownloadingUpdate
+                ? `正在下载 ${updateProgress ?? 0}%`
+                : updateNotice ?? (canInstallUpdate ? '新版本已下载' : '')}
+            </span>
+            <button type="button" onClick={() => setUpdateNotice(null)} aria-label="关闭下载提示">
+              <X size={12} />
+            </button>
+          </div>
+          {isDownloadingUpdate || canInstallUpdate ? (
+            <div className="update-progress-track" aria-label="下载进度">
+              <span style={{ width: `${canInstallUpdate ? 100 : updateProgress ?? 0}%` }} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {reminderNotice ? (
+        <button type="button" className="reminder-bubble" onClick={() => setReminderNotice(null)} aria-label="关闭便签提醒">
+          <AlarmClock size={14} />
+          <span>{reminderNotice}</span>
         </button>
       ) : null}
 

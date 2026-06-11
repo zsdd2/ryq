@@ -492,6 +492,91 @@ button:disabled {
   box-shadow: 0 8px 18px rgb(190 45 45 / 18%);
 }
 
+.update-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 12px 10px;
+  border: 1px solid rgb(197 219 255 / 88%);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgb(237 246 255 / 96%), rgb(247 241 255 / 94%));
+  padding: 8px 10px;
+  color: var(--blue);
+  box-shadow: 0 10px 24px rgb(64 112 220 / 14%);
+}
+
+.update-notice-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.update-notice-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.update-notice-row button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.update-notice-row button:hover {
+  background: rgb(225 237 255);
+  color: var(--blue);
+}
+
+.update-progress-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(211 226 255 / 82%);
+}
+
+.update-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--violet));
+  transition: width 0.18s ease;
+}
+
+.reminder-bubble {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 15;
+  display: inline-flex;
+  max-width: min(360px, calc(100vw - 36px));
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(255 204 116 / 70%);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(255 249 235 / 98%), rgb(255 241 211 / 96%));
+  padding: 9px 13px;
+  color: rgb(151 89 10);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 16px 42px rgb(190 122 24 / 20%);
+}
+
+.reminder-bubble span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .note-workspace {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
@@ -638,15 +723,15 @@ button:disabled {
 
 .note-card {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(132px, 154px) 24px;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(210px, 240px) 24px;
   align-items: start;
   gap: 7px;
-  min-height: 54px;
+  min-height: 66px;
   border: 1px solid rgb(220 231 250);
   border-radius: 14px;
   background:
     linear-gradient(180deg, rgb(255 255 255 / 96%), rgb(249 252 255 / 94%));
-  padding: 8px;
+  padding: 10px 8px;
   cursor: grab;
   box-shadow: var(--card-shadow);
 }
@@ -712,6 +797,7 @@ button:disabled {
   -webkit-line-clamp: 2;
   font-size: 13px;
   line-height: 1.45;
+  padding-top: 1px;
 }
 
 .note-preview :where(p, ul, ol, h1, h2, h3) {
@@ -727,7 +813,7 @@ button:disabled {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .note-timer-stack.empty {
@@ -736,13 +822,13 @@ button:disabled {
 
 .note-timer-row {
   display: grid;
-  grid-template-columns: minmax(24px, 1fr) minmax(28px, 44px) minmax(34px, auto) 18px;
+  grid-template-columns: minmax(52px, 1fr) 54px 52px 18px;
   align-items: center;
   column-gap: 7px;
-  min-height: 20px;
+  min-height: 23px;
   border-radius: 7px;
   background: rgb(237 244 255 / 78%);
-  padding: 2px 6px;
+  padding: 3px 6px;
   color: var(--blue);
 }
 
@@ -753,7 +839,7 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 750;
 }
 
@@ -768,7 +854,7 @@ button:disabled {
 
 .timer-card-quota-input {
   width: 100%;
-  height: 16px;
+  height: 18px;
   border: 1px solid rgb(175 199 255);
   border-radius: 5px;
   background: rgb(255 255 255 / 92%);
@@ -779,7 +865,7 @@ button:disabled {
 }
 
 .note-timer-row strong {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 850;
   text-align: right;
   white-space: nowrap;

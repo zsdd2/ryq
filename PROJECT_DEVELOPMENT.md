@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.4.3 with quick countdown presets, card-level quota editing, and quick countdown refresh actions.
+Prepare 任意签 1.4.4 with wider timer card layout, separated update/download notices, progress display, and persistent reminder bubbles.
 
 ## Current Status
 
@@ -56,6 +56,9 @@ Prepare 任意签 1.4.3 with quick countdown presets, card-level quota editing, 
 | Quick countdown presets | Implemented | Timer editor now exposes 30天, 7天, and 5小时 presets that set due time relative to now and store quick preset metadata. |
 | Card quota editing | Implemented | Timer quota can be edited directly on the note card and saves on blur or Enter. |
 | Quick countdown refresh | Implemented | Quick timer rows on note cards expose a refresh action that resets the due time from the current time. |
+| Timer card layout | Implemented | Note card timer columns, row height, and vertical padding were increased so timer rows no longer overflow the card. |
+| Update notice separation | Implemented | Download/update messages are split from general errors and reminder messages; download progress is shown separately. |
+| Reminder bubble | Implemented | Timer reminders now appear as a persistent bubble that closes only when clicked. |
 
 ## Scope Boundary
 
@@ -457,6 +460,25 @@ Updated UI target:
   - `dist/renyiqian-setup-1.4.3.exe`
   - `dist/renyiqian-setup-1.4.3.exe.blockmap`
   - `dist/latest.yml` points to `renyiqian-setup-1.4.3.exe`.
+
+## Latest Verification - Timer Layout And Notice Separation
+
+- Increased the note-card timer column and row height so name, quota, remaining time, and refresh controls have enough horizontal space.
+- Increased card vertical padding and minimum height so multiple timer rows expand inside the card instead of overflowing.
+- Split update/download messages from generic error and reminder state.
+- Added a separate update notice area with a progress bar using `downloadProgressPercent`.
+- Added a separate `下载更新` / `安装更新` action beside `检查更新`; checking no longer immediately downloads.
+- Changed timer due reminders into a persistent bubble that closes only when the user clicks it.
+- Package metadata is set to `1.4.4`.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 42 tests.
+  - `npm run dist:win`
+  - `codegraph sync` reported the index is up to date.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.4.exe`
+  - `dist/renyiqian-setup-1.4.4.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.4.exe`.
 
 ## Environment Notes
 
