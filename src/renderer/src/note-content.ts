@@ -10,6 +10,7 @@ interface StoredNoteDescription {
 }
 
 export type NoteTimerRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
+export type NoteTimerQuickPreset = 'monthly' | 'weekly' | 'five-hour'
 
 export interface NoteTimer {
   id: string
@@ -18,6 +19,7 @@ export interface NoteTimer {
   dueAt: number
   status: 'scheduled' | 'fired'
   repeat?: NoteTimerRepeat
+  quickPreset?: NoteTimerQuickPreset
 }
 
 export interface NoteView extends CardRecord {
@@ -67,6 +69,49 @@ function addMonths(timestamp: number, months: number): number {
   const date = new Date(timestamp)
   date.setMonth(date.getMonth() + months)
   return date.getTime()
+}
+
+function isQuickPreset(value: unknown): value is NoteTimerQuickPreset {
+  return value === 'monthly' || value === 'weekly' || value === 'five-hour'
+}
+
+export function buildQuickTimerPreset(
+  quickPreset: NoteTimerQuickPreset,
+  now = Date.now()
+): Pick<NoteTimer, 'dueAt' | 'repeat' | 'quickPreset'> {
+  if (quickPreset === 'monthly') {
+    return {
+      dueAt: now + 30 * 24 * 60 * 60 * 1000,
+      repeat: 'monthly',
+      quickPreset
+    }
+  }
+
+  if (quickPreset === 'weekly') {
+    return {
+      dueAt: now + 7 * 24 * 60 * 60 * 1000,
+      repeat: 'weekly',
+      quickPreset
+    }
+  }
+
+  return {
+    dueAt: now + 5 * 60 * 60 * 1000,
+    repeat: 'none',
+    quickPreset
+  }
+}
+
+export function refreshQuickTimer(timer: NoteTimer, now = Date.now()): NoteTimer | null {
+  if (!timer.quickPreset) {
+    return null
+  }
+
+  return {
+    ...timer,
+    ...buildQuickTimerPreset(timer.quickPreset, now),
+    status: 'scheduled'
+  }
 }
 
 export function resolveTimerDueAt(timer: NoteTimer, now = Date.now()): number {
@@ -188,6 +233,7 @@ function normalizeTimers(value: unknown): NoteTimer[] {
       repeat:
         timer.repeat === 'daily' || timer.repeat === 'weekly' || timer.repeat === 'monthly'
           ? timer.repeat
-          : 'none'
+          : 'none',
+      quickPreset: isQuickPreset(timer.quickPreset) ? timer.quickPreset : undefined
     }))
 }

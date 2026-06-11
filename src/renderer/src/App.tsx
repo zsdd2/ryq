@@ -13,6 +13,7 @@ import {
   PinOff,
   Plus,
   Power,
+  RefreshCw,
   Trash2,
   Underline,
   X
@@ -22,6 +23,7 @@ import renyiqianLogoUrl from '../../../logos/renyiqian-logo.png'
 import {
   buildNoteDescription,
   buildNoteDescriptionWithTimers,
+  buildQuickTimerPreset,
   createNoteView,
   escapeHtml,
   formatTimerRemaining,
@@ -29,7 +31,9 @@ import {
   getSummaryFromHtml,
   getTimerQuotaInputValue,
   normalizeTimerQuota,
+  refreshQuickTimer,
   resolveTimerDueAt,
+  type NoteTimerQuickPreset,
   type NoteTimerRepeat,
   type NoteTimer,
   type NoteView
@@ -52,6 +56,11 @@ const DEFAULT_TEMPLATE_TEXT = '客户\n电话\n事项\n备注'
 const DEFAULT_TEMPLATE_COLUMNS_TEXT = '内容'
 const LAUNCHER_DRAG_HOLD_MS = 220
 const DEFAULT_NOTE_TEMPLATES = getDefaultNoteTemplates()
+const QUICK_TIMER_PRESETS: Array<{ id: NoteTimerQuickPreset; label: string }> = [
+  { id: 'monthly', label: '30天' },
+  { id: 'weekly', label: '7天' },
+  { id: 'five-hour', label: '5小时' }
+]
 
 function App(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
@@ -74,7 +83,9 @@ function App(): JSX.Element {
   const [timerQuota, setTimerQuota] = useState('')
   const [timerDueAt, setTimerDueAt] = useState('')
   const [timerRepeat, setTimerRepeat] = useState<NoteTimerRepeat>('none')
+  const [timerQuickPreset, setTimerQuickPreset] = useState<NoteTimerQuickPreset | null>(null)
   const [editingTimerId, setEditingTimerId] = useState<string | null>(null)
+  const [editingCardQuota, setEditingCardQuota] = useState<{ noteId: string; timerId: string; value: string } | null>(null)
   const [timerNow, setTimerNow] = useState(() => Date.now())
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -445,13 +456,15 @@ function App(): JSX.Element {
       quota: normalizeTimerQuota(timerQuota),
       dueAt,
       status: 'scheduled',
-      repeat: timerRepeat
+      repeat: timerRepeat,
+      quickPreset: timerQuickPreset ?? undefined
     }
 
     setTimerName('')
     setTimerQuota('')
     setTimerDueAt('')
     setTimerRepeat('none')
+    setTimerQuickPreset(null)
     setEditingTimerId(null)
     const nextTimers = editingTimerId
       ? note.timers.map((timer) => (timer.id === editingTimerId ? nextTimer : timer))
@@ -468,6 +481,7 @@ function App(): JSX.Element {
     setTimerQuota(getTimerQuotaInputValue(timer.quota))
     setTimerDueAt(formatDatetimeLocal(resolveTimerDueAt(timer, timerNow)))
     setTimerRepeat(timer.repeat ?? 'none')
+    setTimerQuickPreset(timer.quickPreset ?? null)
   }
 
   function getPendingTimerEdit(note: NoteView): NoteTimer[] | null {
@@ -489,10 +503,51 @@ function App(): JSX.Element {
             quota: normalizeTimerQuota(timerQuota),
             dueAt,
             status: 'scheduled',
-            repeat: timerRepeat
+            repeat: timerRepeat,
+            quickPreset: timerQuickPreset ?? undefined
           }
         : timer
     )
+  }
+
+  function applyQuickTimerPreset(quickPreset: NoteTimerQuickPreset): void {
+    const nextPreset = buildQuickTimerPreset(quickPreset, Date.now())
+    setTimerDueAt(formatDatetimeLocal(nextPreset.dueAt))
+    setTimerRepeat(nextPreset.repeat ?? 'none')
+    setTimerQuickPreset(quickPreset)
+  }
+
+  async function saveCardTimerQuota(note: NoteView, timerId: string, value: string): Promise<void> {
+    const nextTimers = note.timers.map((timer) =>
+      timer.id === timerId
+        ? {
+            ...timer,
+            quota: normalizeTimerQuota(value)
+          }
+        : timer
+    )
+    setEditingCardQuota(null)
+    await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+  }
+
+  async function refreshCardTimer(note: NoteView, timerId: string): Promise<void> {
+    const now = Date.now()
+    let refreshed = false
+    const nextTimers = note.timers.map((timer) => {
+      if (timer.id !== timerId) {
+        return timer
+      }
+      const nextTimer = refreshQuickTimer(timer, now)
+      if (!nextTimer) {
+        return timer
+      }
+      refreshed = true
+      return nextTimer
+    })
+    if (!refreshed) {
+      return
+    }
+    await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
   }
 
   async function saveSelectedNote(note: NoteView): Promise<void> {
@@ -506,6 +561,7 @@ function App(): JSX.Element {
     setTimerQuota('')
     setTimerDueAt('')
     setTimerRepeat('none')
+    setTimerQuickPreset(null)
     await saveNote(note, getCurrentEditorHtml(), note.pinned, timers, { closeAfterSave: true })
   }
 
@@ -516,6 +572,7 @@ function App(): JSX.Element {
       setTimerQuota('')
       setTimerDueAt('')
       setTimerRepeat('none')
+      setTimerQuickPreset(null)
     }
     await saveNote(
       note,
@@ -1136,8 +1193,53 @@ function App(): JSX.Element {
                     {getVisibleTimerRows(note.timers).map((timer) => (
                       <div className="note-timer-row" key={timer.id} title={timer.title}>
                         <span className="timer-card-name">{timer.name}</span>
-                        <span className="timer-card-quota">{timer.quota || '-'}</span>
+                        {editingCardQuota?.noteId === note.id && editingCardQuota.timerId === timer.id ? (
+                          <input
+                            className="timer-card-quota-input"
+                            type="number"
+                            min="0"
+                            autoFocus
+                            value={editingCardQuota.value}
+                            onChange={(event) =>
+                              setEditingCardQuota({ noteId: note.id, timerId: timer.id, value: event.target.value })
+                            }
+                            onBlur={(event) => void saveCardTimerQuota(note, timer.id, event.currentTarget.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.currentTarget.blur()
+                              } else if (event.key === 'Escape') {
+                                setEditingCardQuota(null)
+                              }
+                            }}
+                            aria-label="修改剩余额度"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="timer-card-quota"
+                            onClick={() =>
+                              setEditingCardQuota({
+                                noteId: note.id,
+                                timerId: timer.id,
+                                value: getTimerQuotaInputValue(timer.quota)
+                              })
+                            }
+                            aria-label="修改剩余额度"
+                          >
+                            {timer.quota || '-'}
+                          </button>
+                        )}
                         <strong>{timer.due}</strong>
+                        <button
+                          type="button"
+                          className="timer-card-refresh"
+                          onClick={() => void refreshCardTimer(note, timer.id)}
+                          disabled={!note.timers.find((candidate) => candidate.id === timer.id)?.quickPreset}
+                          aria-label="刷新快捷倒计时"
+                          title="按当前时间刷新快捷倒计时"
+                        >
+                          <RefreshCw size={10} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1212,6 +1314,18 @@ function App(): JSX.Element {
                 </div>
                 <AlarmClock size={16} />
               </div>
+              <div className="quick-timer-presets" aria-label="快捷倒计时">
+                {QUICK_TIMER_PRESETS.map((preset) => (
+                  <button
+                    type="button"
+                    key={preset.id}
+                    className={timerQuickPreset === preset.id ? 'active' : ''}
+                    onClick={() => applyQuickTimerPreset(preset.id)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
               {selectedNote.timers.length > 0 ? (
                 <div className="timer-list">
                   {selectedNote.timers.map((timer) => (
@@ -1256,9 +1370,19 @@ function App(): JSX.Element {
                 <input
                   type="datetime-local"
                   value={timerDueAt}
-                  onChange={(event) => setTimerDueAt(event.target.value)}
+                  onChange={(event) => {
+                    setTimerDueAt(event.target.value)
+                    setTimerQuickPreset(null)
+                  }}
                 />
-                <select value={timerRepeat} onChange={(event) => setTimerRepeat(event.target.value as NoteTimerRepeat)} aria-label="计时器周期">
+                <select
+                  value={timerRepeat}
+                  onChange={(event) => {
+                    setTimerRepeat(event.target.value as NoteTimerRepeat)
+                    setTimerQuickPreset(null)
+                  }}
+                  aria-label="计时器周期"
+                >
                   <option value="none">单次</option>
                   <option value="daily">每天</option>
                   <option value="weekly">每周</option>

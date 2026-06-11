@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   buildNoteDescription,
   buildNoteDescriptionWithTimers,
+  buildQuickTimerPreset,
   createNoteView,
   formatTimerRemaining,
   getCompactTimerName,
   getSummaryFromHtml,
   getTimerQuotaInputValue,
   normalizeTimerQuota,
+  refreshQuickTimer,
   resolveTimerDueAt
 } from './note-content'
 
@@ -120,5 +122,39 @@ describe('note content helpers', () => {
     expect(resolveTimerDueAt({ id: 't1', name: 'daily', dueAt: yesterday, status: 'scheduled', repeat: 'daily' }, now)).toBe(
       new Date('2026-06-11T07:30:00.000Z').getTime()
     )
+  })
+
+  it('builds quick timer presets from the current time', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+
+    expect(buildQuickTimerPreset('monthly', now)).toMatchObject({
+      dueAt: now + 30 * 24 * 60 * 60 * 1000,
+      repeat: 'monthly',
+      quickPreset: 'monthly'
+    })
+    expect(buildQuickTimerPreset('weekly', now)).toMatchObject({
+      dueAt: now + 7 * 24 * 60 * 60 * 1000,
+      repeat: 'weekly',
+      quickPreset: 'weekly'
+    })
+    expect(buildQuickTimerPreset('five-hour', now)).toMatchObject({
+      dueAt: now + 5 * 60 * 60 * 1000,
+      repeat: 'none',
+      quickPreset: 'five-hour'
+    })
+  })
+
+  it('refreshes quick timers from the current time', () => {
+    const now = new Date('2026-06-10T18:00:00.000Z').getTime()
+    const timer = {
+      id: 'timer-quick',
+      name: 'quota',
+      dueAt: new Date('2026-06-10T10:00:00.000Z').getTime(),
+      status: 'scheduled' as const,
+      repeat: 'none' as const,
+      quickPreset: 'five-hour' as const
+    }
+
+    expect(refreshQuickTimer(timer, now)?.dueAt).toBe(new Date('2026-06-10T23:00:00.000Z').getTime())
   })
 })

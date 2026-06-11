@@ -2,7 +2,7 @@
 
 ## Current Modification Goal
 
-Prepare 任意签 1.4.2 with direct group switching, horizontal account membership tables, and percentage-based timer quota input.
+Prepare 任意签 1.4.3 with quick countdown presets, card-level quota editing, and quick countdown refresh actions.
 
 ## Current Status
 
@@ -53,6 +53,9 @@ Prepare 任意签 1.4.2 with direct group switching, horizontal account membersh
 | Group title switching | Implemented | Single-clicking a group title switches the active group; double-clicking keeps direct rename available. |
 | Account membership table | Implemented | Account membership templates now generate a horizontal editable table with one account per row and fields as columns. |
 | Percentage quota input | Implemented | New and edited timer quotas use a numeric input with a fixed `%` suffix while legacy non-percent quota text remains readable. |
+| Quick countdown presets | Implemented | Timer editor now exposes 30天, 7天, and 5小时 presets that set due time relative to now and store quick preset metadata. |
+| Card quota editing | Implemented | Timer quota can be edited directly on the note card and saves on blur or Enter. |
+| Quick countdown refresh | Implemented | Quick timer rows on note cards expose a refresh action that resets the due time from the current time. |
 
 ## Scope Boundary
 
@@ -433,6 +436,27 @@ Updated UI target:
   - `dist/renyiqian-setup-1.4.2.exe.blockmap`
   - `dist/latest.yml` points to `renyiqian-setup-1.4.2.exe`.
 - Native Electron interaction was not browser-DOM tested; behavior is covered by helper tests, typecheck, and packaged build verification.
+
+## Latest Verification - Quick Countdown And Card Quota Editing
+
+- Added quick countdown presets in the timer editor:
+  - `30天` sets the due time to current time plus 30 days and stores monthly repeat metadata.
+  - `7天` sets the due time to current time plus 7 days and stores weekly repeat metadata.
+  - `5小时` sets the due time to current time plus 5 hours and remains a one-shot timer.
+- Stored quick countdown metadata on timers so card refresh can distinguish quick timers from ordinary one-shot timers.
+- Added a refresh button at the end of quick timer rows on note cards; it recalculates the due time from the current time.
+- Added direct card-level quota editing: click the quota, edit the numeric value, then press Enter or blur to save.
+- Added regression tests for quick timer presets and refresh calculation.
+- Package metadata is set to `1.4.3`.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 42 tests.
+  - `npm run dist:win`
+  - `codegraph sync` reported the index is up to date.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.3.exe`
+  - `dist/renyiqian-setup-1.4.3.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.3.exe`.
 
 ## Environment Notes
 
