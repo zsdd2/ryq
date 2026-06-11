@@ -21,6 +21,7 @@ import {
 import type { BoardSummary, NoteSearchResult, UpdateStatus, WindowState, WorkspaceRecord } from '@shared/types'
 import renyiqianLogoUrl from '../../../logos/renyiqian-logo.png'
 import {
+  acknowledgeFiredTimers,
   buildNoteDescription,
   buildNoteDescriptionWithTimers,
   buildQuickTimerPreset,
@@ -30,6 +31,7 @@ import {
   getCompactTimerName,
   getSummaryFromHtml,
   getTimerQuotaInputValue,
+  markDueTimersFired,
   normalizeTimerQuota,
   refreshQuickTimer,
   resolveTimerDueAt,
@@ -62,6 +64,12 @@ const QUICK_TIMER_PRESETS: Array<{ id: NoteTimerQuickPreset; label: string }> = 
   { id: 'five-hour', label: '5小时' }
 ]
 
+interface ReminderNotice {
+  noteId: string
+  timerIds: string[]
+  message: string
+}
+
 function App(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [workspace, setWorkspace] = useState<WorkspaceRecord | null>(null)
@@ -72,8 +80,9 @@ function App(): JSX.Element {
   const [windowState, setWindowState] = useState<WindowState | null>(null)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [updateNotice, setUpdateNotice] = useState<string | null>(null)
-  const [reminderNotice, setReminderNotice] = useState<string | null>(null)
+  const [reminderNotice, setReminderNotice] = useState<ReminderNotice | null>(null)
   const [selectedNote, setSelectedNote] = useState<NoteView | null>(null)
+  const [showQuickAddInput, setShowQuickAddInput] = useState(false)
   const [showTemplatePanel, setShowTemplatePanel] = useState(false)
   const [templateText, setTemplateText] = useState(DEFAULT_TEMPLATE_TEXT)
   const [templateColumnsText, setTemplateColumnsText] = useState(DEFAULT_TEMPLATE_COLUMNS_TEXT)
@@ -94,6 +103,7 @@ function App(): JSX.Element {
   const [saving, setSaving] = useState(false)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const quickAddInputRef = useRef<HTMLInputElement | null>(null)
   const editorRef = useRef<HTMLDivElement | null>(null)
   const editorHtmlRef = useRef('')
   const launcherPressRef = useRef<{
@@ -113,6 +123,11 @@ function App(): JSX.Element {
     return (activeGroup?.columns.flatMap((column) => column.cards) ?? [])
       .map(createNoteView)
       .sort((left, right) => {
+        const leftHasFiredTimers = left.timers.some((timer) => timer.status === 'fired')
+        const rightHasFiredTimers = right.timers.some((timer) => timer.status === 'fired')
+        if (leftHasFiredTimers !== rightHasFiredTimers) {
+          return leftHasFiredTimers ? -1 : 1
+        }
         if (left.pinned !== right.pinned) {
           return left.pinned ? -1 : 1
         }
@@ -137,6 +152,12 @@ function App(): JSX.Element {
   const canInstallUpdate = updateStatus?.phase === 'downloaded'
   const isDownloadingUpdate = updateStatus?.phase === 'downloading'
 
+  useEffect(() => {
+    if (showQuickAddInput) {
+      quickAddInputRef.current?.focus()
+    }
+  }, [showQuickAddInput])
+
   function getTemplateRowsText(): string {
     return selectedTemplate?.id === 'custom-table' ? templateText : selectedTemplate?.rows.join('\n') ?? templateText
   }
@@ -148,7 +169,7 @@ function App(): JSX.Element {
   }
 
   function getVisibleTimerRows(timers: NoteTimer[]): Array<{ id: string; name: string; quota: string; due: string; title: string }> {
-    return timers.map((timer) => {
+    return timers.filter((timer) => timer.status !== 'done').map((timer) => {
       const dueAt = resolveTimerDueAt(timer, timerNow)
       return {
         id: timer.id,
@@ -374,6 +395,7 @@ function App(): JSX.Element {
       })
       setWorkspace(nextWorkspace)
       setDraftTitle('')
+      setShowQuickAddInput(false)
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : '新增便签失败')
     } finally {
@@ -567,6 +589,26 @@ function App(): JSX.Element {
       return
     }
     await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+  }
+
+  async function confirmReminder(): Promise<void> {
+    if (!reminderNotice || !workspace) {
+      return
+    }
+
+    const note = workspace.activeBoard.columns
+      .flatMap((column) => column.cards)
+      .map(createNoteView)
+      .find((candidate) => candidate.id === reminderNotice.noteId)
+
+    if (!note) {
+      setReminderNotice(null)
+      return
+    }
+
+    const nextTimers = acknowledgeFiredTimers(note.timers, reminderNotice.timerIds, Date.now())
+    await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+    setReminderNotice(null)
   }
 
   async function saveSelectedNote(note: NoteView): Promise<void> {
@@ -825,49 +867,51 @@ function App(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!workspace) {
+    if (!workspace || reminderNotice) {
       return
     }
 
-    const interval = window.setInterval(() => {
+    const checkReminders = (): void => {
       const now = Date.now()
-      const dueNote = workspace.activeBoard.columns
+      const activeNotes = workspace.activeBoard.columns
         .flatMap((column) => column.cards)
         .map(createNoteView)
+
+      const firedNote = activeNotes.find((note) => note.timers.some((timer) => timer.status === 'fired'))
+      if (firedNote) {
+        const firedTimers = firedNote.timers.filter((timer) => timer.status === 'fired')
+        setReminderNotice({
+          noteId: firedNote.id,
+          timerIds: firedTimers.map((timer) => timer.id),
+          message: `便签提醒：${firedTimers.map((timer) => timer.name).join('、')}`
+        })
+        return
+      }
+
+      const dueNote = activeNotes
         .find((note) => note.timers.some((timer) => timer.status === 'scheduled' && timer.dueAt <= now))
 
       if (!dueNote) {
         return
       }
 
-      const dueTimers = dueNote.timers.filter((timer) => timer.status === 'scheduled' && timer.dueAt <= now)
-      const nextTimers = dueNote.timers.map((timer) => {
-        if (!dueTimers.some((dueTimer) => dueTimer.id === timer.id)) {
-          return timer
-        }
-
-        if ((timer.repeat ?? 'none') !== 'none') {
-          return {
-            ...timer,
-            dueAt: resolveTimerDueAt(timer, now),
-            status: 'scheduled' as const
-          }
-        }
-
-        return {
-          ...timer,
-          status: 'fired' as const
-        }
-      })
+      const { timers: nextTimers, dueTimers } = markDueTimersFired(dueNote.timers, now)
 
       void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers, { keepDialogOpen: false })
-      setReminderNotice(`便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`)
-    }, 10000)
+      setReminderNotice({
+        noteId: dueNote.id,
+        timerIds: dueTimers.map((timer) => timer.id),
+        message: `便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`
+      })
+    }
+
+    checkReminders()
+    const interval = window.setInterval(checkReminders, 10000)
 
     return () => {
       window.clearInterval(interval)
     }
-  }, [workspace])
+  }, [workspace, reminderNotice])
 
   useEffect(() => {
     if (!trimmedSearchQuery) {
@@ -988,19 +1032,36 @@ function App(): JSX.Element {
         </div>
       </header>
 
-      <section className="quick-add">
-        <input
-          value={draftTitle}
-          onChange={(event) => setDraftTitle(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
+      <section className={showQuickAddInput ? 'quick-add expanded' : 'quick-add collapsed'}>
+        {showQuickAddInput ? (
+          <input
+            ref={quickAddInputRef}
+            value={draftTitle}
+            onChange={(event) => setDraftTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                void createQuickNote()
+              } else if (event.key === 'Escape') {
+                setDraftTitle('')
+                setShowQuickAddInput(false)
+              }
+            }}
+            placeholder="快速记录一条便签"
+            disabled={loading || saving || !firstColumnId}
+          />
+        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            if (showQuickAddInput) {
               void createQuickNote()
+            } else {
+              setShowQuickAddInput(true)
             }
           }}
-          placeholder="快速记录一条便签"
-          disabled={loading || saving || !firstColumnId}
-        />
-        <button type="button" onClick={() => void createQuickNote()} disabled={loading || saving || !draftTitle.trim() || !firstColumnId} aria-label="新增便签">
+          disabled={loading || saving || !firstColumnId || (showQuickAddInput && !draftTitle.trim())}
+          aria-label={showQuickAddInput ? '新增便签' : '打开快速记录'}
+        >
           <Plus size={16} />
         </button>
         <button type="button" className="template-toggle" onClick={() => setShowTemplatePanel((currentValue) => !currentValue)}>
@@ -1049,9 +1110,9 @@ function App(): JSX.Element {
       ) : null}
 
       {reminderNotice ? (
-        <button type="button" className="reminder-bubble" onClick={() => setReminderNotice(null)} aria-label="关闭便签提醒">
+        <button type="button" className="reminder-bubble" onClick={() => void confirmReminder()} aria-label="确认便签提醒">
           <AlarmClock size={14} />
-          <span>{reminderNotice}</span>
+          <span>{reminderNotice.message}，点击确认</span>
         </button>
       ) : null}
 
@@ -1221,7 +1282,13 @@ function App(): JSX.Element {
           ) : visibleNotes.length > 0 ? (
             visibleNotes.map((note) => (
               <article
-                className={note.pinned ? 'note-card pinned' : 'note-card'}
+                className={[
+                  'note-card',
+                  note.pinned ? 'pinned' : '',
+                  note.timers.some((timer) => timer.status === 'fired') ? 'timer-alert' : ''
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 key={note.id}
                 draggable={!trimmedSearchQuery}
                 onDragStart={(event) => {
@@ -1250,7 +1317,7 @@ function App(): JSX.Element {
                   {'boardTitle' in note && typeof note.boardTitle === 'string' ? <span className="note-search-badge">{note.boardTitle}</span> : null}
                   <div className="note-preview" dangerouslySetInnerHTML={{ __html: note.html }} />
                 </button>
-                {note.timers.length > 0 ? (
+                {note.timers.some((timer) => timer.status !== 'done') ? (
                   <div className="note-timer-stack" aria-label="倒计时">
                     {getVisibleTimerRows(note.timers).map((timer) => (
                       <div className="note-timer-row" key={timer.id} title={timer.title}>

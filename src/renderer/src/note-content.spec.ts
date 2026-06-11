@@ -8,6 +8,8 @@ import {
   getCompactTimerName,
   getSummaryFromHtml,
   getTimerQuotaInputValue,
+  acknowledgeFiredTimers,
+  markDueTimersFired,
   normalizeTimerQuota,
   refreshQuickTimer,
   resolveTimerDueAt
@@ -156,5 +158,59 @@ describe('note content helpers', () => {
     }
 
     expect(refreshQuickTimer(timer, now)?.dueAt).toBe(new Date('2026-06-10T23:00:00.000Z').getTime())
+  })
+
+  it('marks due scheduled timers as fired before user acknowledgement', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+    const dueAt = new Date('2026-06-10T07:59:00.000Z').getTime()
+    const futureAt = new Date('2026-06-10T09:00:00.000Z').getTime()
+
+    const result = markDueTimersFired(
+      [
+        { id: 'due', name: 'due timer', dueAt, status: 'scheduled' },
+        { id: 'future', name: 'future timer', dueAt: futureAt, status: 'scheduled' }
+      ],
+      now
+    )
+
+    expect(result.dueTimers.map((timer) => timer.id)).toEqual(['due'])
+    expect(result.timers).toMatchObject([
+      { id: 'due', status: 'fired' },
+      { id: 'future', status: 'scheduled' }
+    ])
+  })
+
+  it('acknowledges fired timers by rolling repeating timers and completing one-shot timers', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+
+    expect(
+      acknowledgeFiredTimers(
+        [
+          {
+            id: 'monthly',
+            name: 'monthly timer',
+            dueAt: new Date('2026-06-09T08:00:00.000Z').getTime(),
+            status: 'fired',
+            repeat: 'monthly',
+            quickPreset: 'monthly'
+          },
+          {
+            id: 'single',
+            name: 'single timer',
+            dueAt: new Date('2026-06-09T08:00:00.000Z').getTime(),
+            status: 'fired'
+          }
+        ],
+        ['monthly', 'single'],
+        now
+      )
+    ).toMatchObject([
+      {
+        id: 'monthly',
+        status: 'scheduled',
+        dueAt: now + 30 * 24 * 60 * 60 * 1000
+      },
+      { id: 'single', status: 'done' }
+    ])
   })
 })

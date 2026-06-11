@@ -480,6 +480,36 @@ Updated UI target:
   - `dist/renyiqian-setup-1.4.4.exe.blockmap`
   - `dist/latest.yml` points to `renyiqian-setup-1.4.4.exe`.
 
+## Current Modification Goal - Timer Alerts And Compact Quick Add
+
+- Rebalance the note-card timer area so it no longer consumes about one third of each card.
+- Keep expired timer cards visible at the top with an alert color until the user confirms the reminder.
+- Restore recurring and quick timers to their next cycle after confirmation; complete one-shot timers without leaving stale expired rows on the card.
+- Collapse quick record to a plus button and reveal the input only when requested.
+- Publish the changes as version `1.4.5`.
+
+## Current Status
+
+- Added explicit `scheduled`, `fired`, and `done` timer states.
+- Added tested timer transition helpers for due detection and reminder acknowledgement.
+- Fired timer cards sort above pinned and normal cards and use a distinct alert style.
+- Reminder confirmation restores repeating/quick timers and returns the card to its saved position.
+- Reduced the timer column and row spacing while preserving name, quota, remaining time, and refresh actions.
+- Quick record now opens from a plus button, focuses the input, and collapses after creation or Escape.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 44 tests.
+  - `npm run dist:win`
+  - `codegraph sync` reported the index is up to date.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.4.5.exe`
+  - `dist/renyiqian-setup-1.4.5.exe.blockmap`
+  - `dist/latest.yml` points to `renyiqian-setup-1.4.5.exe`.
+
+## Future Modification Plan
+
+- Verify the GitHub `v1.4.5` updater artifacts after the release workflow completes.
+
 ## Environment Notes
 
 - Use the project-local Node runtime for this checkout:

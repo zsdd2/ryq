@@ -11,13 +11,14 @@ interface StoredNoteDescription {
 
 export type NoteTimerRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
 export type NoteTimerQuickPreset = 'monthly' | 'weekly' | 'five-hour'
+export type NoteTimerStatus = 'scheduled' | 'fired' | 'done'
 
 export interface NoteTimer {
   id: string
   name: string
   quota?: string
   dueAt: number
-  status: 'scheduled' | 'fired'
+  status: NoteTimerStatus
   repeat?: NoteTimerRepeat
   quickPreset?: NoteTimerQuickPreset
 }
@@ -139,6 +140,48 @@ export function resolveTimerDueAt(timer: NoteTimer, now = Date.now()): number {
   return nextDueAt
 }
 
+export function markDueTimersFired(
+  timers: NoteTimer[],
+  now = Date.now()
+): { timers: NoteTimer[]; dueTimers: NoteTimer[] } {
+  const dueTimerIds = new Set(
+    timers.filter((timer) => timer.status === 'scheduled' && timer.dueAt <= now).map((timer) => timer.id)
+  )
+
+  return {
+    timers: timers.map((timer) => (dueTimerIds.has(timer.id) ? { ...timer, status: 'fired' } : timer)),
+    dueTimers: timers.filter((timer) => dueTimerIds.has(timer.id))
+  }
+}
+
+export function acknowledgeFiredTimers(timers: NoteTimer[], timerIds: string[], now = Date.now()): NoteTimer[] {
+  const acknowledgedTimerIds = new Set(timerIds)
+
+  return timers.map((timer) => {
+    if (!acknowledgedTimerIds.has(timer.id)) {
+      return timer
+    }
+
+    const quickTimer = refreshQuickTimer(timer, now)
+    if (quickTimer) {
+      return quickTimer
+    }
+
+    if ((timer.repeat ?? 'none') !== 'none') {
+      return {
+        ...timer,
+        dueAt: resolveTimerDueAt(timer, now),
+        status: 'scheduled'
+      }
+    }
+
+    return {
+      ...timer,
+      status: 'done'
+    }
+  })
+}
+
 export function formatTimerRemaining(dueAt: number, now = Date.now()): string {
   const delta = dueAt - now
   const absoluteDelta = Math.abs(delta)
@@ -229,7 +272,7 @@ function normalizeTimers(value: unknown): NoteTimer[] {
       name: typeof timer.name === 'string' && timer.name.trim() ? timer.name.trim() : '计时器',
       quota: typeof timer.quota === 'string' && timer.quota.trim() ? timer.quota.trim() : undefined,
       dueAt: typeof timer.dueAt === 'number' ? timer.dueAt : Date.now(),
-      status: timer.status === 'fired' ? 'fired' : 'scheduled',
+      status: timer.status === 'fired' || timer.status === 'done' ? timer.status : 'scheduled',
       repeat:
         timer.repeat === 'daily' || timer.repeat === 'weekly' || timer.repeat === 'monthly'
           ? timer.repeat
