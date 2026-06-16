@@ -227,6 +227,7 @@ export interface ColumnMovePayload {
 
 export interface StickbanApi {
   getWorkspace: () => Promise<WorkspaceRecord>
+  getAllNotes: () => Promise<NoteSearchResult[]>
   searchNotes: (query: string) => Promise<NoteSearchResult[]>
   createBoard: (draft: BoardDraft) => Promise<WorkspaceRecord>
   updateBoard: (boardId: string, draft: BoardDraft) => Promise<WorkspaceRecord>

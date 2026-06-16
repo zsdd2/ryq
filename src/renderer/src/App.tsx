@@ -70,6 +70,8 @@ interface ReminderNotice {
   message: string
 }
 
+type ReminderNoteView = NoteView & Pick<NoteSearchResult, 'boardId' | 'boardTitle' | 'columnTitle'>
+
 function App(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [workspace, setWorkspace] = useState<WorkspaceRecord | null>(null)
@@ -198,6 +200,16 @@ function App(): JSX.Element {
   async function refreshWorkspace(): Promise<void> {
     const nextWorkspace = await window.stickban.getWorkspace()
     setWorkspace(nextWorkspace)
+  }
+
+  async function getAllReminderNotes(): Promise<ReminderNoteView[]> {
+    const allNotes = await window.stickban.getAllNotes()
+    return allNotes.map((note) => ({
+      ...createNoteView(note),
+      boardId: note.boardId,
+      boardTitle: note.boardTitle,
+      columnTitle: note.columnTitle
+    }))
   }
 
   async function setPanelOpen(nextValue: boolean): Promise<void> {
@@ -596,10 +608,7 @@ function App(): JSX.Element {
       return
     }
 
-    const note = workspace.activeBoard.columns
-      .flatMap((column) => column.cards)
-      .map(createNoteView)
-      .find((candidate) => candidate.id === reminderNotice.noteId)
+    const note = (await getAllReminderNotes()).find((candidate) => candidate.id === reminderNotice.noteId)
 
     if (!note) {
       setReminderNotice(null)
@@ -871,44 +880,63 @@ function App(): JSX.Element {
       return
     }
 
-    const checkReminders = (): void => {
-      const now = Date.now()
-      const activeNotes = workspace.activeBoard.columns
-        .flatMap((column) => column.cards)
-        .map(createNoteView)
+    let disposed = false
+    let checking = false
 
-      const firedNote = activeNotes.find((note) => note.timers.some((timer) => timer.status === 'fired'))
-      if (firedNote) {
-        const firedTimers = firedNote.timers.filter((timer) => timer.status === 'fired')
+    const checkReminders = async (): Promise<void> => {
+      if (checking) {
+        return
+      }
+
+      checking = true
+      try {
+        const now = Date.now()
+        const activeNotes = await getAllReminderNotes()
+
+        const firedNote = activeNotes.find((note) => note.timers.some((timer) => timer.status === 'fired'))
+        if (firedNote) {
+          if (disposed) {
+            return
+          }
+          const firedTimers = firedNote.timers.filter((timer) => timer.status === 'fired')
+          setReminderNotice({
+            noteId: firedNote.id,
+            timerIds: firedTimers.map((timer) => timer.id),
+            message: `便签提醒：${firedTimers.map((timer) => timer.name).join('、')}`
+          })
+          return
+        }
+
+        const dueNote = activeNotes
+          .find((note) => note.timers.some((timer) => timer.status === 'scheduled' && timer.dueAt <= now))
+
+        if (!dueNote) {
+          return
+        }
+
+        const { timers: nextTimers, dueTimers } = markDueTimersFired(dueNote.timers, now)
+
+        void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers, { keepDialogOpen: false })
+        if (disposed) {
+          return
+        }
         setReminderNotice({
-          noteId: firedNote.id,
-          timerIds: firedTimers.map((timer) => timer.id),
-          message: `便签提醒：${firedTimers.map((timer) => timer.name).join('、')}`
+          noteId: dueNote.id,
+          timerIds: dueTimers.map((timer) => timer.id),
+          message: `便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`
         })
-        return
+      } finally {
+        checking = false
       }
-
-      const dueNote = activeNotes
-        .find((note) => note.timers.some((timer) => timer.status === 'scheduled' && timer.dueAt <= now))
-
-      if (!dueNote) {
-        return
-      }
-
-      const { timers: nextTimers, dueTimers } = markDueTimersFired(dueNote.timers, now)
-
-      void saveNote(dueNote, dueNote.html, dueNote.pinned, nextTimers, { keepDialogOpen: false })
-      setReminderNotice({
-        noteId: dueNote.id,
-        timerIds: dueTimers.map((timer) => timer.id),
-        message: `便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`
-      })
     }
 
-    checkReminders()
-    const interval = window.setInterval(checkReminders, 10000)
+    void checkReminders()
+    const interval = window.setInterval(() => {
+      void checkReminders()
+    }, 10000)
 
     return () => {
+      disposed = true
       window.clearInterval(interval)
     }
   }, [workspace, reminderNotice])

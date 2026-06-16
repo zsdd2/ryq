@@ -10,6 +10,7 @@ import type {
 
 const api: StickbanApi = {
   getWorkspace: () => ipcRenderer.invoke('workspace:get'),
+  getAllNotes: () => ipcRenderer.invoke('workspace:getAllNotes'),
   searchNotes: (query: string) => ipcRenderer.invoke('workspace:searchNotes', query),
   createBoard: (draft: BoardDraft) => ipcRenderer.invoke('board:create', draft),
   updateBoard: (boardId: string, draft: BoardDraft) => ipcRenderer.invoke('board:update', boardId, draft),

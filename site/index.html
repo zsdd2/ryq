@@ -5,40 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Stickban is a sticky desktop Kanban board built for speed, local-first persistence, and low-friction task flow."
+      content="Renyiqian is a compact local-first floating desktop note app for quick notes, templates, timers, and reminders."
     />
-    <title>Stickban</title>
+    <title>任意签 / Renyiqian</title>
   </head>
   <body>
     <div id="app">
       <header class="site-header">
         <div class="brand">
-          <img alt="Stickban logo" class="brand-mark" id="brand-mark" />
+          <img alt="Renyiqian logo" class="brand-mark" id="brand-mark" />
           <div>
-            <p class="eyebrow">Desktop-first Kanban</p>
-            <h1>Stickban keeps your board where your work actually happens.</h1>
+            <p class="eyebrow">Local floating notes</p>
+            <h1>任意签 keeps quick notes visible without turning into a full app.</h1>
           </div>
         </div>
 
         <nav class="top-links">
-          <a href="https://github.com/ivanyort/stickban" rel="noreferrer" target="_blank">GitHub</a>
-          <a href="https://github.com/ivanyort/stickban/releases" rel="noreferrer" target="_blank">Releases</a>
+          <a href="https://github.com/zsdd2/ryq" rel="noreferrer" target="_blank">GitHub</a>
+          <a href="https://github.com/zsdd2/ryq/releases" rel="noreferrer" target="_blank">Releases</a>
         </nav>
       </header>
 
       <main>
         <section class="hero">
           <div class="hero-copy">
-            <span class="badge">Local-first cloud sync</span>
-            <h2>A sticky Kanban board that lives on your desktop.</h2>
+            <span class="badge">Local-first desktop notes</span>
+            <h2>A small floating note center for things you need to see again.</h2>
             <p>
-              Stickban is a lightweight desktop task board built for fast capture, multi-board flow,
-              board-specific columns, SQLite-backed persistence, optional Windows launch-on-login, startup that favors showing the local window before background services catch up, and guarded cloud sync through a folder you already keep synchronized.
+              Renyiqian is a lightweight desktop note app built for fast capture, grouped local notes,
+              rich text, reusable table templates, global search, countdown reminders, stable SQLite persistence,
+              optional Windows launch-on-login, and packaged Windows updates.
             </p>
             <div class="cta-row">
               <a
                 class="cta primary"
-                href="https://github.com/ivanyort/stickban/releases"
+                href="https://github.com/zsdd2/ryq/releases"
                 rel="noreferrer"
                 target="_blank"
               >
@@ -46,7 +47,7 @@
               </a>
               <a
                 class="cta secondary"
-                href="https://github.com/ivanyort/stickban"
+                href="https://github.com/zsdd2/ryq"
                 rel="noreferrer"
                 target="_blank"
               >
@@ -64,18 +65,18 @@
               </div>
               <div class="panel-board">
                 <article>
-                  <h3>Inbox</h3>
-                  <div class="card">Polish landing page copy</div>
-                  <div class="card">Refine desktop interactions</div>
+                  <h3>今日</h3>
+                  <div class="card">客户回访</div>
+                  <div class="card">会员账号续费</div>
                 </article>
                 <article>
-                  <h3>Today</h3>
-                  <div class="card active">Validate release pipeline</div>
-                  <div class="card">Improve keyboard flow</div>
+                  <h3>模板</h3>
+                  <div class="card active">账号会员表格</div>
+                  <div class="card">项目记录表</div>
                 </article>
                 <article>
-                  <h3>Shipped</h3>
-                  <div class="card">Bootstrap Electron app</div>
+                  <h3>提醒</h3>
+                  <div class="card">5小时后确认</div>
                 </article>
               </div>
             </div>
@@ -84,16 +85,16 @@
 
         <section class="grid three-up">
           <article>
-            <h3>Fast local workspace</h3>
-            <p>Multiple boards, board-specific columns, quick card creation, inline rename, and local persistence.</p>
+            <h3>Fast local notes</h3>
+            <p>Grouped notes, quick capture, rich editing, search, and SQLite-backed persistence.</p>
           </article>
           <article>
-            <h3>Offline-first by design</h3>
-            <p>SQLite remains the source of truth while immutable operation files and periodic checkpoints replicate changes through a synced folder, with bootstrap and checkpoint validation guards.</p>
+            <h3>Useful local templates</h3>
+            <p>Reusable table and account-membership templates turn repeated records into editable note tables.</p>
           </article>
           <article>
             <h3>Built for the desktop</h3>
-            <p>Electron shell, always-on-top support, optional Windows launch-on-login, startup optimized to surface the local window before sync and update background work, native-feeling window behavior, and a layout designed to stay visible while you work.</p>
+            <p>Electron shell, always-on-top behavior, optional Windows launch-on-login, compact launcher, and a panel designed to stay out of the way.</p>
           </article>
         </section>
 
@@ -102,16 +103,16 @@
             <p class="section-label">Current stack</p>
             <h2>Pragmatic technology, minimal operational cost.</h2>
             <p>
-              Stickban is built around Electron, React, TypeScript, SQLite, Zustand, Tailwind CSS, and
-              custom renderer-managed drag interactions. The current milestone adds synced-folder cloud replication and Windows in-app update checks without provider APIs or OAuth.
+              Renyiqian is built around Electron, React, TypeScript, SQLite, Tailwind CSS, dnd-kit,
+              electron-builder, and electron-updater. The current product line is local-only and does not require provider APIs, OAuth, accounts, or managed cloud infrastructure.
             </p>
           </div>
           <ul class="stack-list">
             <li>Electron + React + TypeScript</li>
             <li>SQLite via <code>better-sqlite3</code></li>
-            <li>Zustand for UI state</li>
+            <li>dnd-kit for local drag ordering</li>
             <li>Tailwind CSS styling</li>
-            <li>Renderer-managed drag interactions</li>
+            <li>Windows installer and updater flow</li>
           </ul>
         </section>
 
@@ -125,24 +126,24 @@
             <article>
               <h3>Current milestone</h3>
               <ul>
-                <li>Multiple local boards</li>
-                <li>Customizable board-specific columns</li>
-                <li>Column reordering and board-to-board moves</li>
+                <li>Floating launcher and compact panel</li>
+                <li>Grouped local notes</li>
+                <li>Rich text and sanitized previews</li>
+                <li>Reusable table templates</li>
                 <li>SQLite persistence</li>
-                <li>Always-on-top support</li>
+                <li>Countdown reminders</li>
                 <li>Optional Windows launch-on-login</li>
-                <li>Synced-folder cloud sync</li>
                 <li>Windows in-app updates</li>
               </ul>
             </article>
             <article>
               <h3>Next phase</h3>
               <ul>
-                <li>Multi-language interface</li>
-                <li>Theme support</li>
+                <li>Live UI smoke verification</li>
+                <li>Legacy sync/store cleanup</li>
                 <li>System tray integration</li>
-                <li>Sync hardening and recovery UX</li>
-                <li>Richer conflict inspection</li>
+                <li>Theme support</li>
+                <li>Local export/import and recovery UX</li>
               </ul>
             </article>
           </div>
@@ -152,15 +153,15 @@
           <p class="section-label">Project status</p>
           <h2>Open-source, AI-assisted, and still moving fast.</h2>
           <p>
-            Stickban is being built in public, with an AI-assisted workflow and manual review. The public site
+            Renyiqian is being built with an AI-assisted workflow and manual review. The public site
             and desktop app are deployed independently so product releases and project communication can evolve in parallel.
           </p>
         </section>
       </main>
 
       <footer class="site-footer">
-        <p>Stickban is published from the official repository at <strong>ivanyort/stickban</strong>.</p>
-        <p>Custom domain: <strong>stickban.com</strong></p>
+        <p>Renyiqian is published from <strong>zsdd2/ryq</strong>.</p>
+        <p>Local-first by default; optional sync is not part of the current runtime.</p>
       </footer>
     </div>
 

@@ -611,3 +611,129 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
    - Upgrade Electron/build/test tooling conservatively.
    - Rebuild native dependencies with the project-local Node 20 runtime.
    - Verify tests, build, Windows packaging, `latest.yml`, and updater config.
+
+## Latest Verification - Inactive Group Reminder Scope
+
+- Root cause confirmed: the renderer reminder loop only scanned `workspace.activeBoard.columns`, so due timers in inactive groups could be missed until group switching.
+- Added `getAllNotes()` in `src/main/database.ts` and exposed it through `workspace:getAllNotes`, preload, and shared API types.
+- Updated renderer reminder scan and reminder acknowledgement to load all live local notes before checking or acknowledging timers.
+- Verification passed:
+  - `npm test -- src/main/search-notes.spec.ts` passed: 1 test file, 3 tests.
+  - `npm run typecheck`
+- Verification caveat:
+  - The existing Vitest shutdown warning still appears after the passing targeted test.
+
+## Current Modification Goal - HTML Sanitization
+
+- Add a strict sanitizer for stored note HTML before it is rendered through `dangerouslySetInnerHTML`.
+- Preserve supported rich text and template table markup while stripping executable or unsafe pasted/migrated HTML.
+
+## Current Status
+
+- Implemented and verified.
+- Stored note HTML is sanitized at the `createNoteView` boundary before it reaches card preview or editor rendering.
+- The sanitizer preserves supported formatting, template tables, account-template row classes, and inline timer markers.
+- The sanitizer strips script/style-like blocks, event-handler attributes, unsafe `javascript:` links, unsupported tags, unknown classes, and inline styles.
+- Verification passed:
+  - `npm test -- src/renderer/src/note-content.spec.ts` passed: 1 test file, 14 tests.
+  - `npm run typecheck`
+  - `npm test` passed: 10 test files, 50 tests.
+  - `npm run build`
+- Verification caveat:
+  - The existing Vitest shutdown warning still appears after passing test runs.
+
+## Future Modification Plan
+
+1. Reconcile product reality across README, README.pt-BR, SPEC, IMPLEMENTATION, DECISIONS, and `site/`.
+2. Replace current-runtime claims about Stickban synced-folder cloud sync with Renyiqian local floating-note behavior.
+3. Keep dormant sync code documented as legacy/dormant unless a future task explicitly restores it.
+4. Re-run documentation grep checks and build verification after edits.
+
+## Current Modification Goal - Product Reality Documentation Cleanup
+
+- Make public and internal documentation match the active Renyiqian runtime.
+- Remove or reclassify current-runtime claims that synced-folder cloud sync is active.
+
+## Current Status
+
+- Implemented and verified.
+- Rewrote `README.md`, `README.pt-BR.md`, and `SPEC.md` around the active Renyiqian local floating-note runtime.
+- Updated `site/index.html` so public copy, repository links, roadmap snapshot, and current capability claims no longer describe Stickban/Kanban/cloud-sync as the current product.
+- Added `DECISIONS.md` D-015 to record the Renyiqian local-only runtime boundary and marked D-013 as superseded for the active runtime.
+- Updated `AGENTS.md` so future agents treat synced-folder sync as dormant unless a new decision explicitly restores it.
+- Verification passed:
+  - `npm run site:build`
+  - Documentation grep check no longer finds active README/SPEC/site claims that current runtime is Stickban Kanban or synced-folder cloud sync.
+
+## Future Modification Plan
+
+1. Retire or isolate unused legacy renderer store and dormant runtime sync paths.
+2. Add replacement local-note tests before removing legacy code paths.
+3. Keep migration and data durability safeguards intact.
+4. Run typecheck, full tests, build, and CodeGraph sync after code cleanup.
+
+## Current Modification Goal - Legacy Store And Dormant Sync Cleanup
+
+- Remove or isolate unused `src/renderer/src/store.ts` and dormant runtime sync code only after replacement coverage is in place.
+- Keep this separate from the already completed reminder and HTML sanitizer fixes.
+
+## Current Status
+
+- Implemented and verified.
+- Removed the unused legacy renderer Zustand store at `src/renderer/src/store.ts`.
+- Removed the stale sync-risk regression that imported the deleted renderer store; the remaining sync-risk tests continue to cover dormant operation-log behavior.
+- Removed the unused `zustand` package from `package.json` and `package-lock.json`.
+- Kept `src/main/sync.ts` in place as dormant legacy code because deleting it needs a dedicated replacement-test pass.
+- Verification passed:
+  - `rg` found no remaining `useBoardStore`, `zustand`, or renderer-store imports in source or package manifests.
+  - `npm run typecheck`
+  - `npm test -- src/main/sync-risk.spec.ts` passed: 1 test file, 8 tests.
+  - `npm test` passed: 10 test files, 49 tests.
+  - `npm run build`
+- Verification caveat:
+  - The existing Vitest shutdown warning still appears after passing test runs.
+
+## Future Modification Plan
+
+1. Fix the Vitest shutdown warning.
+   - Isolate whether the open handle comes from SQLite cleanup, Electron test process lifecycle, or a specific test file.
+   - Prefer a test harness cleanup fix over suppressing the warning.
+2. Add a repeatable live Electron UI smoke verification.
+3. Schedule the dependency security upgrade batch after the test harness is clean.
+
+## Current Modification Goal - Vitest Shutdown Warning Investigation
+
+- Determine whether the `close timed out after 10000ms` warning comes from a specific test file, SQLite cleanup, or the Electron/Vitest runner.
+- Avoid suppressing the warning unless the underlying runner behavior is understood.
+
+## Current Status
+
+- Investigated and blocked for this repair batch.
+- Minimal tests such as `src/main/local-only-services.spec.ts` reproduce the same 10-second shutdown warning, so the issue is not caused by a specific SQLite test or recently changed business logic.
+- `--reporter=hanging-process` reports Tinypool plus file handles after successful tests.
+- `--pool=threads`, `--pool=forks`, `--pool=vmThreads`, `--pool=typescript`, `--no-file-parallelism`, `--no-isolate`, and single-thread/single-fork options do not remove the warning.
+- Running Vitest directly with the project Node 20 runtime removes the warning for tests that do not load SQLite, but SQLite tests fail because `better-sqlite3` is currently compiled for Electron ABI instead of Node ABI.
+- Conclusion: the current test command must keep using Electron for native-module compatibility, and the shutdown warning should be fixed together with the planned Electron/Vitest/native dependency upgrade batch rather than hidden in the runner.
+
+## Future Modification Plan
+
+1. Add a repeatable live Electron UI smoke verification.
+2. Run a dedicated dependency upgrade batch for Electron, Vitest, Vite, builder tooling, and `better-sqlite3`.
+3. After the upgrade, re-test whether Vitest can run through Node directly or whether the Electron runner closes cleanly.
+
+## Latest Verification - Audit Repair Batch 1
+
+- Completed the first ordered repair batch from the full audit:
+  - inactive-group reminder delivery;
+  - stored note HTML sanitization;
+  - product reality documentation cleanup;
+  - legacy renderer store removal;
+  - Vitest shutdown warning root-cause isolation.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 10 test files, 49 tests.
+  - `npm run site:build`
+  - `npm run build`
+  - `codegraph sync` reported the index is up to date.
+- Verification caveat:
+  - The Vitest shutdown warning is confirmed to be an Electron/Vitest/native-module runner compatibility issue and remains scheduled for the dependency upgrade batch.

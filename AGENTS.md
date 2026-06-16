@@ -2,8 +2,8 @@
 
 ## Purpose / Proposito
 
-**EN:** This file defines how programming agents should operate in the Stickban repository. It is intended for tools such as Codex, Claude, and similar coding agents.  
-**PT-BR:** Este arquivo define como agentes de programacao devem operar no repositorio Stickban. Ele e destinado a ferramentas como Codex, Claude e agentes similares.
+**EN:** This file defines how programming agents should operate in the Renyiqian repository. It is intended for tools such as Codex, Claude, and similar coding agents.
+**PT-BR:** Este arquivo define como agentes de programacao devem operar no repositorio Renyiqian. Ele e destinado a ferramentas como Codex, Claude e agentes similares.
 
 ## Primary Source of Truth / Fonte Principal de Verdade
 
@@ -16,15 +16,15 @@ If a proposal conflicts with `SPEC.md`, treat the spec as authoritative unless t
 
 **EN**
 
-- The repository is in bootstrap stage.
-- A runnable local-first application scaffold now exists.
+- The repository has moved beyond the original Stickban bootstrap into the Renyiqian floating-note fork.
+- A runnable local-first floating note application now exists.
 - Do not describe commands, scripts, folders, or modules as already implemented unless they exist in the repository.
 - Treat planned structure as planned structure, not current implementation.
 
 **PT-BR**
 
-- O repositorio esta em fase de bootstrap.
-- Ja existe um scaffold executavel local-first da aplicacao.
+- O repositorio saiu do bootstrap original do Stickban e agora e o fork Renyiqian de notas flutuantes.
+- Ja existe uma aplicacao executavel local-first de notas flutuantes.
 - Nao descreva comandos, scripts, pastas ou modulos como ja implementados se eles nao existirem no repositorio.
 - Trate a estrutura planejada como estrutura planejada, nao como implementacao atual.
 
@@ -38,13 +38,12 @@ Agents should stay aligned with these project-level decisions:
 - Zustand for state management
 - Tailwind CSS for styling
 - Renderer-managed drag and drop
-- Offline-first architecture
+- Offline-first local architecture
 - Local SQLite database as source of truth
-- User-selected synced folder as sync provider
-- Immutable operation-log sync with periodic checkpoints
-- Tombstones and deterministic merge rules for remote conflict handling
+- Current runtime is local-only; synced-folder sync code is legacy/dormant
+- Restoring sync, multi-device behavior, or remote conflict handling requires a new recorded decision
 - AI-assisted development by default, with manual edits allowed when appropriate
-- Initial scaffold must remain local-first and exclude Google sync, OAuth, and external infrastructure
+- Current product line must remain local-first and exclude Google sync, OAuth, accounts, and external infrastructure
 - Public landing page deployment must stay separate from the desktop release pipeline
 
 ## Agent Operating Rules / Regras Operacionais para Agentes
@@ -52,14 +51,14 @@ Agents should stay aligned with these project-level decisions:
 1. Do not invent repository reality.
    State clearly when something is planned versus already implemented.
 
-2. Preserve the offline-first model.
-   Local writes should be treated as primary; sync is a secondary propagation mechanism.
+2. Preserve the offline-first local model.
+   Local writes should be treated as primary; current runtime behavior must not depend on sync.
 
 3. Treat SQLite as the authoritative local store.
    Do not redesign persistence around remote-first assumptions.
 
-4. Do not introduce sync behavior that contradicts the documented remote sync direction.
-   If a change would alter the synced-folder provider model, operation-log strategy, checkpoint role, or conflict semantics, record it in [`DECISIONS.md`](./DECISIONS.md) as part of the same work.
+4. Do not introduce or restore sync behavior without an explicit product decision.
+   The old synced-folder implementation is dormant. If a change would remove, restore, or alter sync/provider/checkpoint/conflict behavior, record it in [`DECISIONS.md`](./DECISIONS.md) as part of the same work.
 
 5. Keep the implementation scope intentionally narrow.
    Do not add provider APIs, OAuth, paid services, or managed cloud dependencies unless the documented project direction changes.
@@ -101,7 +100,7 @@ Avoid copying large sections from `SPEC.md`. Prefer linking back to the spec and
 Keep AI workflow policy and public transparency notes consistent across `README.md` and `README.pt-BR.md` when they change.
 Treat `.md` files and the public site under `site/` as mandatory synchronization targets whenever the delivery changes public-facing capabilities or project reality.
 Do not record completed implementation work in `ROADMAP.md`, and do not use `IMPLEMENTATION.md` as a backlog for future work.
-Do not introduce paid dependencies or cloud requirements into the initial scaffold unless the repository decisions are updated first.
+Do not introduce paid dependencies or cloud requirements into the current local-first product line unless the repository decisions are updated first.
 Treat commit conventions as release semantics, because pushes to `main` are expected to trigger automatic SemVer-based releases.
 Keep GitHub Pages publication protected so forks can build the landing page without deploying the official domain.
 
@@ -110,12 +109,12 @@ Keep GitHub Pages publication protected so forks can build the landing page with
 Unless the repository later defines a different rule:
 
 - Use UUIDs for entity identifiers
-- Prefer soft deletes where sync safety matters
-- Avoid blocking the UI during sync work
-- Protect local data from remote sync failures
+- Prefer soft deletes where local recovery safety matters
+- Avoid blocking the UI during update checks or background work
+- Protect local data from reinstall, update, migration, and dormant-sync cleanup failures
 - Keep naming and module boundaries consistent with the planned app/main/renderer split
 - Assume AI-assisted implementation is the preferred delivery path unless the user explicitly requests otherwise
-- Assume the current sync milestone must run without provider APIs or OAuth
+- Assume the current runtime is local-only unless a newer decision explicitly restores sync
 
 ## Git Workflow Policy / Politica de Workflow Git
 

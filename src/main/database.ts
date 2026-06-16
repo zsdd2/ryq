@@ -1437,6 +1437,16 @@ export function searchNotes(query: string): NoteSearchResult[] {
     return []
   }
 
+  return getAllNotes()
+    .filter((row) => `${row.title}\n${row.description}\n${row.boardTitle}\n${row.columnTitle}`.toLowerCase().includes(normalizedQuery))
+    .slice(0, 50)
+    .map((row, index) => ({
+      ...row,
+      position: index
+    }))
+}
+
+export function getAllNotes(): NoteSearchResult[] {
   const rows = getDb()
     .prepare(
       `
@@ -1461,13 +1471,10 @@ export function searchNotes(query: string): NoteSearchResult[] {
     )
     .all() as Array<Omit<NoteSearchResult, 'position'>>
 
-  return rows
-    .filter((row) => `${row.title}\n${row.description}\n${row.boardTitle}\n${row.columnTitle}`.toLowerCase().includes(normalizedQuery))
-    .slice(0, 50)
-    .map((row, index) => ({
-      ...row,
-      position: index
-    }))
+  return rows.map((row, index) => ({
+    ...row,
+    position: index
+  }))
 }
 
 export function getDeviceId(): string {

@@ -1,51 +1,63 @@
-# Stickban
+# 任意签 / Renyiqian
 
-Um quadro Kanban persistente que fica visivel na sua area de trabalho.
+Um app desktop compacto de notas flutuantes, local-first, para notas pessoais sempre visiveis.
 
-For the English version, see [`README.md`](./README.md).
+Versao em ingles: [`README.md`](./README.md).
 
-## Visao Geral
+## Visao geral
 
-Stickban e um aplicativo desktop de Kanban focado em velocidade, baixo atrito e visibilidade constante. A direcao do produto e offline-first, com persistencia local como fonte primaria de dados e sincronizacao opcional em nuvem entre dispositivos.
+Renyiqian e um app desktop Electron local-first. Ele abre como um pequeno launcher flutuante e expande para um painel compacto de notas com captura rapida, grupos, texto rico, modelos, busca, temporizadores, lembretes e verificacao de atualizacoes no Windows.
 
-## Estado Atual
+Este fork comecou a partir da base Stickban, mas o runtime ativo nao e mais um produto Kanban nem um produto de sync em nuvem. Nomes internos como boards/cards ainda existem como camada de compatibilidade enquanto o app se comporta como notas locais agrupadas.
 
-Este repositorio esta em fase de bootstrap. A especificacao do produto existe em [`SPEC.md`](./SPEC.md), e o primeiro scaffold executavel da aplicacao agora ja existe.
+## Estado atual
 
-A documentacao deste repositorio serve para estabelecer direcao enquanto a implementacao ainda amadurece.
-O milestone executavel atual continua local-first, mas agora tambem inclui sync em nuvem via pasta sincronizada escolhida pelo usuario. O app atual cobre multiplos quadros locais, colunas especificas por quadro, reordenacao e movimento de colunas entre quadros, persistencia em SQLite, drag and drop, always-on-top, uma opcao de iniciar com o login do Windows que permanece desativada por padrao, um fluxo de startup que prioriza mostrar a janela local antes de concluir trabalho de background de sync e update, protecao de instancia unica para evitar janelas duplicadas durante startup ou reabertura, limpeza de entradas duplicadas de inicializacao no Windows, arquivos imutaveis de operacoes de sync, checkpoints periodicos, protecoes no bootstrap inicial do sync, validacao estrutural de checkpoints, reprocessamento de operacoes remotas fora de ordem com dependencias ausentes, backups locais de recovery antes de adocoes remotas destrutivas e rejeicao de operacoes remotas orfas que corromperiam o workspace.
+O app executavel atual inclui:
 
-## Direcao do Produto
+- Launcher flutuante apenas com logo e painel compacto always-on-top
+- Notas locais agrupadas com SQLite
+- Edicao rica de notas e preview em cards
+- Modelos de tabela e modelos de gerenciamento de contas/assinaturas
+- Busca global em todos os grupos locais
+- Temporizadores por nota, atalhos de contagem regressiva, confirmacao de lembrete e edicao de cota
+- Ordenacao por arraste dentro de secoes fixadas e nao fixadas
+- Preferencia opcional de iniciar com o Windows, desativada por padrao
+- Caminho estavel de dados no Windows empacotado: `%APPDATA%/renyiqian/data/renyiqian.db`
+- Verificacao de atualizacoes no Windows via GitHub Releases e `electron-updater`
 
-- Fluxo de Kanban orientado a desktop
-- Comportamento de widget fixo, com modo always-on-top opcional
-- Experiencia leve e rapida
-- Arquitetura offline-first
-- Persistencia local em SQLite
-- Sincronizacao opcional em nuvem via pasta sincronizada gerenciada pelo usuario
+O main process ativo expoe chamadas IPC de sync apenas como respostas locais de compatibilidade. A implementacao antiga de sync por pasta sincronizada e seus testes continuam no repositorio como codigo legado/dormant ate serem removidos ou restaurados por uma decisao futura de produto.
 
-## Stack Planejada
+## Direcao do produto
+
+- Fluxo local-only em uma unica maquina por padrao
+- Acesso rapido como acessorio flutuante de desktop
+- SQLite como fonte local de verdade
+- Sem contas, APIs de provedores, OAuth, servicos pagos ou infraestrutura cloud gerenciada na linha atual do produto
+- Sync opcional ou suporte multi-dispositivo somente depois de uma decisao explicita de escopo
+
+## Stack tecnico
 
 - Electron
 - React + TypeScript
 - SQLite via `better-sqlite3`
-- Zustand para gerenciamento de estado
 - Tailwind CSS
-- Interacoes de drag and drop gerenciadas no renderer
+- dnd-kit para interacoes de arraste no renderer
+- electron-builder e electron-updater para empacotamento/atualizacao no Windows
 
-## Recorte Inicial de Implementacao
-
-- Manter o stack desktop local: Electron, React + TypeScript, `better-sqlite3`, Zustand, Tailwind CSS e interacoes de drag and drop gerenciadas no renderer
-- Manter o SQLite como fonte operacional de verdade enquanto o sync propaga arquivos imutaveis de operacoes e checkpoints periodicos por uma pasta sincronizada
-- Evitar APIs de provedores, OAuth e infraestrutura cloud gerenciada
-- Focar o milestone atual em um workspace local-first com multiplos quadros, colunas especificas por quadro, rename inline de colunas, drag and drop de colunas, persistencia em SQLite, always-on-top, inicio opcional com o login do Windows, startup priorizando a visibilidade da janela local antes do trabalho de background, e sync em pasta sincronizada
-
-## Desenvolvimento Local
+## Desenvolvimento local
 
 Pre-requisitos:
 
-- Node.js 18+ recomendado
+- Node.js 20 e recomendado neste checkout porque a toolchain local ja foi validada com `better-sqlite3`
 - npm
+
+Setup recomendado no Windows:
+
+```powershell
+$root = (Resolve-Path .).Path
+$env:PATH = (Join-Path $root '.tools\node-v20.20.2-win-x64') + ';' + $env:PATH
+$env:LOCALAPPDATA = (Join-Path $root '.localappdata')
+```
 
 Comandos:
 
@@ -53,142 +65,55 @@ Comandos:
 npm install
 npm test
 npm run dev
+npm run build
+npm run dist:win
 npm run site:build
 ```
 
-Se voce estiver rodando como `root` em WSL/Linux, use:
+## Caminho dos dados locais
 
-```bash
-npm run dev:root
-```
-
-Build de producao:
-
-```bash
-npm run build
-npm run dist
-```
-
-Para abrir o app buildado como `root`:
-
-```bash
-npm run start:root
-```
-
-Script de conveniencia para atualizar o repositorio local:
-
-```bash
-./update-local-main.sh
-```
-
-Argumentos opcionais:
-
-```bash
-./update-local-main.sh origin main
-```
-
-O script faz fetch do remoto e atualiza com fast-forward only, mas se recusa a rodar quando o working tree esta sujo.
-
-## Localizacao dos Dados Locais
-
-A build desktop atual do Renyiqian persiste seu banco SQLite local em:
+O build desktop atual do Renyiqian persiste seu SQLite local em:
 
 ```text
 <userData>/data/renyiqian.db
 ```
 
-Locais tipicos:
+Locais comuns:
 
 - App empacotado no Windows: `%APPDATA%/renyiqian/data/renyiqian.db`
 - Builds antigas no Windows podem ter usado `%APPDATA%/任意签/data/renyiqian.db` ou `%APPDATA%/Stickban/data/stickban.db`; a migracao de startup copia esses bancos para o diretorio canonico `renyiqian` quando o novo diretorio ainda nao tem notas do usuario.
 - App empacotado no Linux: `~/.config/renyiqian/data/renyiqian.db`
-- Execucoes de desenvolvimento no Linux ainda podem usar um diretorio de user-data do Electron.
 
-O caminho empacotado no Windows e mantido estavel entre reinstalacoes e atualizacoes para evitar perda aparente de notas quando o nome visivel do produto muda.
+## Estrutura do repositorio
 
-## Principios Centrais
+A implementacao atual vive principalmente em:
 
-- Dados locais sao a fonte de verdade
-- Interacoes da interface devem permanecer responsivas
-- A sincronizacao nao deve bloquear a interface
-- Dados locais nao podem ser perdidos por falhas de sincronizacao
-- Desenvolvimento assistido por IA e o fluxo padrao, com edicoes manuais permitidas quando fizer sentido
-- Mudancas arquiteturais devem permanecer alinhadas com [`SPEC.md`](./SPEC.md) e [`DECISIONS.md`](./DECISIONS.md)
+- `src/main/`: main process Electron, SQLite, janelas, atualizacao e codigo legado de sync
+- `src/preload/`: ponte IPC segura para o renderer
+- `src/renderer/`: UI React das notas flutuantes
+- `src/shared/`: tipos compartilhados de IPC/dados
+- `site/`: landing page publica
 
-## Estrutura Planejada do Projeto
+## Roadmap resumido
 
-A estrutura abaixo esta planejada, mas ainda nao foi implementada.
+Veja [`ROADMAP.md`](./ROADMAP.md) para o plano detalhado.
 
-```text
-/app
-  /main
-  /renderer
-  /db
-  /services
-    /sync
-    /syncFolder
-  /models
-  /store
-  /components
-  /hooks
-  /utils
-```
-
-## Resumo do Roadmap
-
-Para o roadmap detalhado, veja [`ROADMAP.md`](./ROADMAP.md).
-
-- Atual: workspace local, multiplos quadros, colunas customizaveis, drag and drop de colunas, persistencia em SQLite, always-on-top, inicio opcional com o login do Windows e sync em pasta sincronizada
-- Proxima fase: interface multi idiomas, system tray, temas e hardening do sync
-- Futuro: campos customizados, notificacoes, inspecao mais rica de conflitos e recuperacao, app mobile complementar
-
-## Documentos do Repositorio
-
-- [`README.md`](./README.md): versao em ingles deste README
-- [`SPEC.md`](./SPEC.md): especificacao do produto
-- [`ROADMAP.md`](./ROADMAP.md): marcos planejados e prioridades futuras
-- [`IMPLEMENTATION.md`](./IMPLEMENTATION.md): estado atual do repositorio e marcos entregues
-- [`AGENTS.md`](./AGENTS.md): guia operacional para agentes de programacao
-- [`DECISIONS.md`](./DECISIONS.md): registro de decisoes arquiteturais
-
-## Landing Page
-
-- O projeto inclui uma landing page publica buildada a partir de [`site/`](./site)
-- A landing page foi pensada para publicacao no GitHub Pages
-- O dominio publico canonico e `stickban.com`
-- Forks podem buildar o site, mas a publicacao automatica no Pages fica restrita ao repositorio oficial
+- Atual: notas flutuantes locais, persistencia SQLite agrupada, edicao rica, modelos, busca, temporizadores, lembretes, preferencia de startup no Windows e atualizacoes empacotadas no Windows
+- Proximo: reparos guiados por auditoria, incluindo lembretes fora do grupo ativo, sanitizacao de HTML rico, consistencia de docs/runtime, limpeza de codigo legado, investigacao do warning de shutdown dos testes e smoke test real da UI
+- Futuro: tray, temas, export/import, recuperacao local de backup e somente escopos de sync/app companheiro explicitamente aprovados
 
 ## Releases
 
-- Cada push para `main` deve gerar uma GitHub Release automatica
-- A versao da release e calculada a partir das commit conventions desde a ultima tag SemVer
-- `feat` sobe minor, `fix` e tipos operacionais sobem patch, e `BREAKING CHANGE` ou `type!` sobem major
-- Artefatos publicos de release sao gerados atualmente apenas para Windows
-- As releases de Windows sao distribuidas como instalador NSIS
-- Builds empacotadas de Windows expoem uma configuracao opt-in para iniciar com o login do usuario, e ela permanece desativada por padrao
-- Builds empacotadas de Windows agora verificam atualizacoes em GitHub Releases dentro do app e podem reiniciar para instalar um update baixado
-- O instalador e o updater in-app mantem desativada por padrao a reabertura automatica do app depois da instalacao/update
-- O empacotamento para Linux continua disponivel localmente, mas artefatos Linux nao sao publicados nas GitHub Releases neste momento
-- A landing page publica e publicada separadamente do pipeline de release do app desktop
+- Pushes em `main` devem gerar GitHub Releases automaticas
+- O versionamento segue convencoes de commit desde a ultima tag SemVer
+- Artefatos publicos sao produzidos atualmente apenas para Windows
+- Releases de Windows usam instalador NSIS
+- Builds empacotadas de Windows verificam GitHub Releases dentro do app e podem reiniciar para instalar uma atualizacao baixada
 
-## Desenvolvimento Assistido por IA
+## Desenvolvimento assistido por IA
 
-O Stickban foi concebido desde o inicio como um projeto desenvolvido com ferramentas assistidas por IA, incluindo ferramentas como Codex, Claude, Antigravity e sistemas equivalentes. O modelo preferencial de manutencao deste repositorio e continuar usando ferramentas de desenvolvimento com IA como fluxo principal, sem impedir edicoes manuais diretas quando elas forem a melhor opcao para uma tarefa.
-
-## Nota de Transparencia
-
-Este repositorio pode conter codigo, documentacao e estrutura de projeto criados ou refinados com assistencia de IA e revisao humana. O uso de IA nao elimina a necessidade de validacao tecnica. O projeto nao oferece qualquer garantia adicional alem dos termos ja definidos em [`LICENSE`](./LICENSE), e a revisao independente continua recomendavel para usos comerciais, regulados ou de maior risco.
-
-## Como Comecar Hoje
-
-O repositorio agora contem um scaffold executavel local-first em Electron/React/TypeScript para o primeiro milestone.
-O estado atual do repositorio esta documentado em [`IMPLEMENTATION.md`](./IMPLEMENTATION.md).
-O modelo atual de sync funciona sem servicos pagos, APIs de provedores, OAuth ou infraestrutura cloud gerenciada. Ele depende de uma pasta ja sincronizada pelo cliente de nuvem instalado pelo usuario.
-O repositorio agora tambem inclui uma suite automatizada de regressao focada em bootstrap do sync, operacoes remotas adiadas, backups de recovery, flush no encerramento e refresh imediato do workspace apos a escolha da pasta sincronizada.
-O rodape do app exibe a versao de runtime exposta pelo Electron, pensada para coincidir com a versao injetada nas releases empacotadas pelo workflow de GitHub Actions.
-Builds empacotadas de Windows agora tambem verificam atualizacoes em GitHub Releases no startup e periodicamente durante a sessao, e o renderer deixa essas checagens mais visiveis com texto no rodape e banners de update.
-O painel de sync/status agora tambem expoe um toggle opt-in para iniciar com o login do Windows, persistido localmente, desativado por padrao, e que passa a diferenciar quando a entrada foi registrada pelo app, mas ficou desabilitada nas configuracoes de inicializacao do proprio Windows. O startup desktop agora prioriza colocar a janela local na tela antes de continuar servicos de sync e update em background, o Stickban passa a manter apenas uma instancia ativa ao focar a janela existente quando uma segunda abertura e tentada, e as builds empacotadas de Windows limpam entradas duplicadas antigas de inicializacao antes de reaplicar a preferencia atual.
+Este repositorio e mantido com ferramentas assistidas por IA, incluindo Codex, Claude, Antigravity e sistemas similares. A preferencia de manutencao e usar ferramentas capazes de IA como fluxo principal, sem impedir edicoes manuais diretas quando forem a melhor opcao.
 
 ## Licenca
 
-Este repositorio inclui a licenca MIT em [`LICENSE`](./LICENSE).
+Este repositorio inclui uma licenca MIT em [`LICENSE`](./LICENSE).

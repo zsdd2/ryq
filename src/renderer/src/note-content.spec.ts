@@ -52,6 +52,53 @@ describe('note content helpers', () => {
     expect(note.summary).toBe('Important Second line')
   })
 
+  it('sanitizes stored rich html before rendering note views', () => {
+    const description = buildNoteDescription({
+      html: '<p onclick="alert(1)">Hello<script>alert(2)</script><img src=x onerror="alert(3)"><a href="javascript:alert(4)">bad</a></p>',
+      pinned: false
+    })
+    const note = createNoteView({
+      id: 'card-safe',
+      columnId: 'column-1',
+      title: 'Unsafe note',
+      description,
+      position: 1,
+      createdAt: '2026-06-10T00:00:00.000Z',
+      updatedAt: '2026-06-10T00:00:00.000Z'
+    })
+
+    expect(note.html).toBe('<p>Hello<a>bad</a></p>')
+    expect(note.html).not.toContain('script')
+    expect(note.html).not.toContain('onclick')
+    expect(note.html).not.toContain('onerror')
+    expect(note.html).not.toContain('javascript:')
+  })
+
+  it('preserves supported formatting, table markup, and timer markers while sanitizing attributes', () => {
+    const description = buildNoteDescription({
+      html: '<table class="note-template-table unknown"><tbody><tr class="account-template-row"><th scope="row" style="color:red">账号</th><td><strong>VIP</strong><span class="note-inline-timer other" data-timer-id="timer-1" onclick="alert(1)">计时</span></td></tr></tbody></table>',
+      pinned: false
+    })
+    const note = createNoteView({
+      id: 'card-table',
+      columnId: 'column-1',
+      title: 'Table note',
+      description,
+      position: 1,
+      createdAt: '2026-06-10T00:00:00.000Z',
+      updatedAt: '2026-06-10T00:00:00.000Z'
+    })
+
+    expect(note.html).toContain('<table class="note-template-table">')
+    expect(note.html).toContain('<tr class="account-template-row">')
+    expect(note.html).toContain('<th scope="row">账号</th>')
+    expect(note.html).toContain('<strong>VIP</strong>')
+    expect(note.html).toContain('<span class="note-inline-timer" data-timer-id="timer-1">计时</span>')
+    expect(note.html).not.toContain('style=')
+    expect(note.html).not.toContain('onclick=')
+    expect(note.html).not.toContain('unknown')
+  })
+
   it('extracts a plain summary from rich html', () => {
     expect(getSummaryFromHtml('<h1>Title</h1><p>First<br>Second</p>')).toBe('Title First Second')
   })

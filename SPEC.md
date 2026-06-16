@@ -1,129 +1,105 @@
-# Stickban
+# 任意签 / Renyiqian
 
-**A sticky Kanban board that lives on your desktop.**
-
-Stickban is a lightweight desktop Kanban application designed to stay visible and accessible while you work. It combines an offline-first local workspace with optional cross-device synchronization through a user-selected synced folder.
+Renyiqian is a compact local-first desktop note app. It is designed to stay visible as a small floating launcher and expand into a focused note panel when the user needs to capture, review, edit, search, or acknowledge reminders.
 
 ## Product Summary
 
-- Desktop-first Kanban workflow
-- Offline-first architecture with SQLite as the source of truth
-- Multiple persisted boards with board-specific columns
-- Fast card movement inside and across columns
-- Optional always-on-top behavior
-- Optional cloud propagation through a synced folder already managed by the user
+- Local floating desktop notes
+- SQLite as the local source of truth
+- Small always-on-top launcher and compact panel
+- Grouped notes with rich text content
+- Table/account templates for repeated local records
+- Global local search
+- Per-note timers, reminder acknowledgement, quick countdown presets, and quota editing
+- Packaged Windows update checks through GitHub Releases
 
 ## Current Repository Reality
 
-The current runnable milestone already includes:
+The current runnable app includes:
 
-- Multiple local boards
-- Board-specific columns
-- Card drag and drop
-- SQLite persistence
-- Always-on-top support
-- Optional Windows launch-on-login preference, disabled by default
-- Synced-folder cloud sync via immutable operation files and periodic checkpoints
-- Packaged Windows update checks through GitHub Releases
+- Logo-only floating launcher
+- Compact note panel
+- Local groups backed by the existing board compatibility model
+- Local notes backed by the existing card compatibility model
+- Rich text editor and sanitized rendered note HTML
+- Global search across all live local notes
+- Timer reminders that scan all groups, not only the active group
+- Optional launch-on-login preference for packaged Windows builds
+- Stable Windows data path under `%APPDATA%/renyiqian`
+- In-app update checks for packaged Windows builds
 
-The following are not current implementation reality yet:
+The following are not active runtime capabilities:
 
-- Multi-language interface
-- Theme support
-- System tray integration
-- Adjustable opacity
-- Managed provider APIs or OAuth-based sync
+- Accounts
+- Cloud sync
+- Multi-device sync
+- Provider APIs
+- OAuth
+- Managed backend infrastructure
+- Mobile companion app
 
-## Tech Stack
-
-- Electron
-- React + TypeScript
-- SQLite via `better-sqlite3`
-- Zustand for renderer state
-- Tailwind CSS
-- Renderer-managed drag interactions
+Legacy synced-folder sync code remains in the repository, but the active main process currently exposes sync IPC as local-only compatibility responses. Treat that code as dormant until a future decision explicitly removes or restores it.
 
 ## Usage
 
-- Launch Stickban
-- Create, edit, move, and delete cards directly in the board UI
-- Create, rename, reorder, move, and delete columns
-- Switch between multiple boards
-- Toggle always-on-top to keep the app visible
+- Launch Renyiqian
+- Click the floating logo launcher to open the note panel
+- Create notes in the active group
+- Search across all groups
+- Open a note to edit rich content
+- Generate table/account template notes
+- Add timers to notes
+- Confirm reminder bubbles when timers fire
+- Collapse the panel back to the floating launcher
 - Optionally enable launch on Windows login in packaged Windows builds
-- Work fully locally even without internet
-- If a synced folder is configured, let the background file-based sync loop propagate changes across devices
+- Install packaged Windows updates after they are downloaded
 
 ## Architecture Overview
 
-Stickban follows an offline-first model:
+Renyiqian follows a local-first model:
 
-- Local SQLite database is the operational source of truth
-- Local writes succeed immediately and do not depend on sync availability
-- A synced folder is used only as a propagation layer between devices
-- Sync uses immutable operation files plus periodic checkpoints
-- Sync failures must not discard local data
+- Local SQLite is the operational source of truth
+- Local reads and writes must work without internet
+- Sync is not part of the current active runtime
+- Update checks are separate from local data storage and should not block note usage
+- Rich note HTML must be sanitized before renderer insertion
+- Local reminders must consider all live notes, including inactive groups
 
 ## Data Model
 
-Main entities:
+Current compatibility entities:
 
-- Boards
-- Columns
-- Cards
+- Boards represent note groups
+- Columns remain as compatibility containers
+- Cards represent notes
 
-Current model guarantees:
+Current note content:
 
-- All entities have stable IDs
-- Deletes use tombstones where sync safety matters
-- Sync metadata exists to support deterministic replay and conflict handling
-- Cards persist `createdAt` and `updatedAt`
-- Boards and columns currently persist ordering, tombstones, and sync state instead of dedicated timestamp/version columns
+- `CardRecord.description` stores JSON for rich note HTML, pinned state, and timers
+- Legacy plain-text descriptions are still readable
+- Rendered note HTML is sanitized at the note-view boundary
 
 Implementation defaults:
 
 - New entities should use UUIDs
-- Local SQLite remains authoritative
-- Sync metadata should stay explicit enough to support replay, checkpoint validation, and conflict recovery
+- SQLite remains authoritative
+- Local data must survive reinstall/update/product-name changes
+- Remote-first assumptions should not be introduced without a recorded decision
 
-## Synchronization
+## Non-functional Requirements
 
-Current sync model:
-
-- Provider: user-managed synced folder such as OneDrive, Dropbox, Google Drive Desktop, iCloud Drive, or equivalent
-- Strategy: immutable operation log with periodic checkpoints
-- Source of truth: local SQLite on each device
-- Recovery primitive: checkpoint import plus later operation replay
-
-Current sync triggers:
-
-- App startup when a synced folder is already configured
-- Choosing a synced folder
-- Local changes after debounce
-- Filesystem changes detected in the synced folder
-- Periodic background interval
-- Manual `Sync now`
-
-Current sync safety rules:
-
-- Remote bootstrap into an already populated folder must import valid remote state before any local export is allowed
-- Invalid checkpoints are rejected instead of becoming canonical state
-- Orphan remote operations that reference missing boards or columns are skipped
-- Disconnecting a synced folder clears the trusted link so reconnecting the same path runs bootstrap again
-
-## Offline Support
-
-Stickban works fully offline:
-
-- Local reads and writes remain available without internet
-- Sync depends only on the local presence of the chosen synced folder
-- If the cloud drive client has not yet downloaded the sync files onto the current machine, Stickban cannot import them until they exist locally
+- Fast startup
+- Responsive renderer interactions
+- No UI blocking during update checks
+- Local data protection during app update/reinstall
+- Predictable reminder behavior across all local groups
+- Safe rendering of stored or pasted rich note HTML
 
 ## Local Development
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20 recommended for this checkout
 - npm
 
 ### Install
@@ -144,41 +120,41 @@ npm run dev
 npm run build
 ```
 
+### Windows package
+
+```bash
+npm run dist:win
+```
+
 ## Project Structure
 
-The repository does not yet match a fully separated final folder layout. The current app implementation lives mainly in:
+The current implementation lives mainly in:
 
 - `src/main/`
 - `src/preload/`
 - `src/renderer/`
 - `src/shared/`
-
-Any broader `/app/...` structure should still be treated as planned, not current repository reality.
-
-## Non-functional Requirements
-
-- Fast startup
-- Responsive renderer interactions
-- No UI blocking during sync or update checks
-- Local data protection against sync failures
-- Deterministic sync behavior when devices reconnect
+- `site/`
 
 ## Roadmap Direction
 
-Current focus areas after the current milestone:
+Current priority:
 
-- Synced-folder cloud sync hardening
-- Multi-language interface support
+- Audit-driven repair work before feature expansion
+- Reminder correctness
+- Rich HTML sanitization
+- Documentation/runtime consistency
+- Legacy sync/store cleanup
+- Test-runner shutdown cleanup
+- Live UI smoke verification
+
+Future product work:
+
 - System tray integration
 - Theme support
-- Richer sync conflict inspection and recovery UX
-
-## Development Defaults
-
-- Prefer soft deletes for sync safety
-- Never block the UI during sync
-- Never lose local data because of sync failures
-- Keep sync secondary to local persistence, never the other way around
+- Export/import
+- Local backup and recovery UX
+- Optional sync only after explicit scope approval
 
 ## License
 

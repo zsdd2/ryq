@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { closeDatabase, createBoard, createCard, getWorkspace, initializeDatabase, searchNotes } from './database'
+import { closeDatabase, createBoard, createCard, getAllNotes, getWorkspace, initializeDatabase, searchNotes } from './database'
 
 const tempDirs: string[] = []
 
@@ -46,5 +46,26 @@ describe('searchNotes', () => {
     initializeDatabase(createUserDataDir())
 
     expect(searchNotes('   ')).toEqual([])
+  })
+
+  it('lists notes across inactive groups for reminder checks', () => {
+    initializeDatabase(createUserDataDir())
+
+    const firstWorkspace = getWorkspace()
+    createCard(firstWorkspace.activeBoard.columns[0].id, {
+      title: '默认分组提醒',
+      description: 'first reminder'
+    })
+
+    const secondWorkspace = createBoard({ title: '会员账号' })
+    createCard(secondWorkspace.activeBoard.columns[0].id, {
+      title: '会员到期提醒',
+      description: 'inactive group reminder'
+    })
+
+    const notes = getAllNotes()
+
+    expect(notes.map((note) => note.title)).toEqual(['会员到期提醒', '默认分组提醒'])
+    expect(notes.map((note) => note.boardTitle)).toEqual(['会员账号', '默认分组'])
   })
 })

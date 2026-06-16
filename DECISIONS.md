@@ -1,7 +1,7 @@
 # DECISIONS
 
-**EN:** Lightweight architecture decision log for Stickban.  
-**PT-BR:** Registro leve de decisoes arquiteturais do Stickban.
+**EN:** Lightweight architecture decision log for Renyiqian, including inherited Stickban decisions.
+**PT-BR:** Registro leve de decisoes arquiteturais do Renyiqian, incluindo decisoes herdadas do Stickban.
 
 ## How to Read / Como Ler
 
@@ -162,16 +162,16 @@
   The project needs a public-facing landing page that can be published automatically without coupling the site build to the desktop application release pipeline.
   O projeto precisa de uma landing page publica que possa ser publicada automaticamente sem acoplar o build do site ao pipeline de release da aplicacao desktop.
 - Decision / Decisao:
-  Maintain the landing page inside the same repository under `site/`, publish it through a dedicated GitHub Pages workflow, use `stickban.com` as the canonical domain, and restrict automatic deployment to the official repository `ivanyort/stickban`.
-  Manter a landing page no mesmo repositorio em `site/`, publica-la por um workflow dedicado de GitHub Pages, usar `stickban.com` como dominio canonico e restringir a publicacao automatica ao repositorio oficial `ivanyort/stickban`.
+  Maintain the landing page inside the same repository under `site/`, publish it through a dedicated GitHub Pages workflow, and keep the public site deployment independent from the desktop release pipeline. The current Renyiqian repository is `zsdd2/ryq`.
+  Manter a landing page no mesmo repositorio em `site/`, publica-la por um workflow dedicado de GitHub Pages e manter o deploy do site publico independente do pipeline de release desktop. O repositorio atual do Renyiqian e `zsdd2/ryq`.
 - Consequences / Consequencias:
-  The desktop app and public site can evolve independently, forks can still build the landing locally, and only the official repository is allowed to publish the canonical public site.
-  O app desktop e o site publico podem evoluir de forma independente, forks continuam podendo buildar a landing localmente, e apenas o repositorio oficial pode publicar o site publico canonico.
+  The desktop app and public site can evolve independently, and forks can still build the landing locally.
+  O app desktop e o site publico podem evoluir de forma independente, e forks continuam podendo buildar a landing localmente.
 
 ## D-012: Local Workspace Model
 
 - Date / Data: 2026-03-23
-- Status: accepted
+- Status: superseded
 - Context / Contexto:
   The updated interaction model now includes multiple boards, and the application needs to persist board navigation and board-specific structure without introducing sync or cloud dependencies.
   O modelo de interacao atualizado agora inclui multiplos quadros, e a aplicacao precisa persistir a navegacao entre quadros e a estrutura especifica de cada quadro sem introduzir sync ou dependencias cloud.
@@ -185,7 +185,7 @@
 ## D-013: Synced Folder Cloud Sync
 
 - Date / Data: 2026-03-25
-- Status: accepted
+- Status: superseded
 - Context / Contexto:
   The repository now ships a real cloud sync implementation, and the earlier Google Drive AppDataFolder plan no longer matches the delivered architecture.
   O repositorio agora entrega uma implementacao real de sync em nuvem, e o plano anterior de Google Drive AppDataFolder nao corresponde mais a arquitetura entregue.
@@ -193,12 +193,14 @@
   Use a user-selected synced folder as the cloud propagation layer. Keep SQLite as the local operational source of truth, replicate immutable operation files between devices, and use periodic checkpoints only for recovery and faster bootstrap.
   Usar uma pasta sincronizada escolhida pelo usuario como camada de propagacao em nuvem. Manter o SQLite como fonte operacional local de verdade, replicar arquivos imutaveis de operacoes entre dispositivos e usar checkpoints periodicos apenas para recuperacao e bootstrap mais rapido.
 - Consequences / Consequencias:
-  The product no longer depends on Google Drive APIs or OAuth. Sync correctness now depends on operation-log replay, tombstones, and checkpoint recovery instead of a single shared snapshot file. Public documentation must describe synced-folder cloud sync as current repository reality.
-  O produto deixa de depender de APIs do Google Drive ou OAuth. A corretude do sync agora depende de replay do log de operacoes, tombstones e recuperacao por checkpoints, em vez de um unico arquivo de snapshot compartilhado. A documentacao publica deve descrever o sync por pasta sincronizada como realidade atual do repositorio.
+  At the time of this decision, the product no longer depended on Google Drive APIs or OAuth. Sync correctness depended on operation-log replay, tombstones, and checkpoint recovery instead of a single shared snapshot file.
+  Na epoca desta decisao, o produto deixou de depender de APIs do Google Drive ou OAuth. A corretude do sync dependia de replay do log de operacoes, tombstones e recuperacao por checkpoints, em vez de um unico arquivo de snapshot compartilhado.
   Remote bootstrap into an already populated synced folder must import and validate remote state before any local export or checkpoint write is allowed, and invalid checkpoints or orphan remote operations must be rejected instead of becoming the new canonical state.
   O bootstrap remoto em uma pasta sincronizada ja populada deve importar e validar o estado remoto antes de permitir qualquer export local ou escrita de checkpoint, e checkpoints invalidos ou operacoes remotas orfas devem ser rejeitados em vez de virarem o novo estado canonico.
   Deferred remote operations caused by missing local dependencies must remain retryable instead of being recorded as consumed, and destructive remote-adoption flows must create a local recovery backup before replacing the active workspace.
   Operacoes remotas adiadas por dependencias locais ausentes devem continuar reprocessaveis em vez de serem registradas como consumidas, e fluxos destrutivos de adocao do remoto devem criar um backup local de recovery antes de substituir o workspace ativo.
+  Superseded for the active Renyiqian runtime by D-015.
+  Substituida para o runtime ativo do Renyiqian pela D-015.
 
 ## D-014: Windows Auto-update via GitHub Releases
 
@@ -213,6 +215,20 @@
 - Consequences / Consequencias:
   The release workflow must publish updater metadata alongside the Windows installer, the main process needs a dedicated update service and IPC surface, and the renderer must expose update status without mixing it with sync semantics. Development builds and non-Windows packages stay outside the automatic update flow.
   O workflow de release passa a publicar metadata do updater junto com o instalador de Windows, o main process precisa de um servico dedicado de update e superficie IPC, e o renderer deve expor o estado de update sem misturar isso com a semantica de sync. Builds de desenvolvimento e pacotes fora de Windows ficam fora do fluxo automatico de update.
+
+## D-015: Renyiqian Local Floating Notes Runtime
+
+- Date / Data: 2026-06-16
+- Status: accepted
+- Context / Contexto:
+  The repository has evolved from the original Stickban Kanban product into the Renyiqian floating-note fork. The active main process no longer constructs the synced-folder `SyncManager`; sync IPC is currently served by local-only compatibility handlers.
+  O repositorio evoluiu do produto Kanban Stickban original para o fork Renyiqian de notas flutuantes. O main process ativo nao instancia mais o `SyncManager` de pasta sincronizada; o IPC de sync atualmente responde por handlers locais de compatibilidade.
+- Decision / Decisao:
+  Treat the current Renyiqian runtime as a local-only single-machine floating note app. Keep synced-folder sync code as legacy/dormant code until a future task explicitly removes it or restores it behind a current product decision.
+  Tratar o runtime atual do Renyiqian como um app local-only de notas flutuantes para uma unica maquina. Manter o codigo de sync por pasta sincronizada como legado/dormant ate que uma tarefa futura o remova explicitamente ou o restaure por uma decisao atual de produto.
+- Consequences / Consequencias:
+  Public documentation, the landing page, roadmap, and agent guidance must not describe synced-folder cloud sync as an active capability. New work should prioritize local note correctness, reminder reliability, safe rich HTML rendering, local data durability, and packaged Windows update behavior.
+  A documentacao publica, a landing page, o roadmap e as orientacoes para agentes nao devem descrever sync em nuvem por pasta sincronizada como capability ativa. Novo trabalho deve priorizar corretude das notas locais, confiabilidade dos lembretes, renderizacao segura de HTML rico, durabilidade dos dados locais e comportamento de atualizacao no Windows empacotado.
 
 ## Notes / Notas
 

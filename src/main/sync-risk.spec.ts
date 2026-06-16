@@ -91,16 +91,6 @@ function buildOperation(
   }
 }
 
-function createBoardSummary(workspace: WorkspaceRecord): WorkspaceRecord['boards'][number] {
-  return {
-    id: workspace.activeBoard.id,
-    title: workspace.activeBoard.title,
-    position: workspace.activeBoard.position,
-    columnCount: workspace.activeBoard.columns.length,
-    cardCount: workspace.activeBoard.columns.reduce((total, column) => total + column.cards.length, 0)
-  }
-}
-
 function buildSyncStatus(overrides: Partial<SyncStatus> = {}): SyncStatus {
   return {
     configured: true,
@@ -395,63 +385,4 @@ describe('sync hardening regressions', () => {
     expect(listJsonFiles(remoteFolder.operationsPath)).toHaveLength(1)
   })
 
-  it('refreshes the workspace in the store immediately after choosing a sync folder', async () => {
-    vi.resetModules()
-
-    const importedWorkspace: WorkspaceRecord = {
-      boards: [],
-      activeBoardId: 'board-imported',
-      activeBoard: {
-        id: 'board-imported',
-        title: 'Imported Board',
-        position: 0,
-        columns: []
-      }
-    }
-    importedWorkspace.boards = [createBoardSummary(importedWorkspace)]
-
-    const syncStatus = buildSyncStatus()
-    const syncFolderInfo = {
-      folderPath: 'C:/sync',
-      syncRootPath: 'C:/sync/stickban-sync',
-      operationsPath: 'C:/sync/stickban-sync/operations',
-      checkpointsPath: 'C:/sync/stickban-sync/checkpoints',
-      providerHint: 'OneDrive'
-    }
-
-    Object.defineProperty(globalThis, 'window', {
-      value: {
-        stickban: {
-          chooseSyncFolder: vi.fn().mockResolvedValue(syncStatus),
-          getWorkspace: vi.fn().mockResolvedValue(importedWorkspace),
-          getSyncStatus: vi.fn().mockResolvedValue(syncStatus),
-          getSyncFolderInfo: vi.fn().mockResolvedValue(syncFolderInfo),
-          getSyncNotices: vi.fn().mockResolvedValue([])
-        }
-      },
-      configurable: true,
-      writable: true
-    })
-
-    const { useBoardStore } = await import('../renderer/src/store')
-    useBoardStore.setState({
-      boards: [],
-      activeBoardId: null,
-      activeBoard: null,
-      loading: false,
-      saving: false,
-      error: null,
-      syncStatus: null,
-      syncFolderInfo: null,
-      syncNotices: []
-    })
-
-    await useBoardStore.getState().chooseSyncFolder()
-
-    const state = useBoardStore.getState()
-    expect(state.activeBoard?.title).toBe('Imported Board')
-    expect(state.activeBoardId).toBe('board-imported')
-    expect(state.syncStatus?.hasCompletedSync).toBe(true)
-    expect(state.saving).toBe(false)
-  })
 })

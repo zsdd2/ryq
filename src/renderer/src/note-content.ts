@@ -1,6 +1,52 @@
 import type { CardRecord } from '@shared/types'
 
 const NOTE_DESCRIPTION_VERSION = 1
+const ALLOWED_HTML_TAGS = new Set([
+  'a',
+  'b',
+  'br',
+  'div',
+  'em',
+  'i',
+  'li',
+  'ol',
+  'p',
+  'span',
+  'strong',
+  'table',
+  'tbody',
+  'td',
+  'th',
+  'thead',
+  'tr',
+  'u',
+  'ul'
+])
+const VOID_HTML_TAGS = new Set(['br'])
+const REMOVED_HTML_TAGS = [
+  'base',
+  'button',
+  'embed',
+  'form',
+  'iframe',
+  'input',
+  'link',
+  'math',
+  'meta',
+  'object',
+  'option',
+  'script',
+  'select',
+  'style',
+  'svg',
+  'textarea'
+]
+const ALLOWED_CLASS_NAMES = new Set([
+  'account-template-row',
+  'account-template-table',
+  'note-inline-timer',
+  'note-template-table'
+])
 
 interface StoredNoteDescription {
   version: number
@@ -59,6 +105,97 @@ export function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function escapeAttribute(value: string): string {
+  return escapeHtml(value).replace(/`/g, '&#96;')
+}
+
+function isSafeHref(value: string): boolean {
+  const normalized = value.trim().replace(/[\u0000-\u001F\u007F\s]+/g, '').toLowerCase()
+  return (
+    normalized.startsWith('https://') ||
+    normalized.startsWith('http://') ||
+    normalized.startsWith('mailto:') ||
+    normalized.startsWith('#') ||
+    normalized.startsWith('/')
+  )
+}
+
+function sanitizeClassAttribute(value: string): string | null {
+  const classes = value
+    .split(/\s+/)
+    .map((className) => className.trim())
+    .filter((className) => ALLOWED_CLASS_NAMES.has(className))
+
+  return classes.length > 0 ? classes.join(' ') : null
+}
+
+function sanitizeHtmlAttributes(tagName: string, attributes: string): string {
+  const sanitized: string[] = []
+  const attributePattern = /([a-zA-Z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g
+  let match: RegExpExecArray | null
+
+  while ((match = attributePattern.exec(attributes)) !== null) {
+    const name = match[1].toLowerCase()
+    const value = match[3] ?? match[4] ?? match[5] ?? ''
+
+    if (name.startsWith('on')) {
+      continue
+    }
+
+    if (name === 'class') {
+      const safeClasses = sanitizeClassAttribute(value)
+      if (safeClasses) {
+        sanitized.push(`class="${escapeAttribute(safeClasses)}"`)
+      }
+      continue
+    }
+
+    if (tagName === 'th' && name === 'scope' && ['row', 'col', 'rowgroup', 'colgroup'].includes(value)) {
+      sanitized.push(`scope="${value}"`)
+      continue
+    }
+
+    if (tagName === 'span' && name === 'data-timer-id') {
+      sanitized.push(`data-timer-id="${escapeAttribute(value)}"`)
+      continue
+    }
+
+    if (tagName === 'a' && name === 'href' && isSafeHref(value)) {
+      sanitized.push(`href="${escapeAttribute(value.trim())}"`)
+    }
+  }
+
+  return sanitized.length > 0 ? ` ${sanitized.join(' ')}` : ''
+}
+
+export function sanitizeNoteHtml(html: string): string {
+  const removedTagPattern = REMOVED_HTML_TAGS.join('|')
+  const withoutDangerousBlocks = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(new RegExp(`<\\s*(${removedTagPattern})\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>`, 'gi'), '')
+    .replace(new RegExp(`<\\s*\\/?\\s*(${removedTagPattern})\\b[^>]*>`, 'gi'), '')
+
+  return withoutDangerousBlocks.replace(
+    /<\s*(\/?)\s*([a-zA-Z][\w:-]*)([^>]*)>/g,
+    (_match, closingSlash: string, rawTagName: string, rawAttributes: string) => {
+      const tagName = rawTagName.toLowerCase()
+      if (!ALLOWED_HTML_TAGS.has(tagName)) {
+        return ''
+      }
+
+      if (closingSlash) {
+        return VOID_HTML_TAGS.has(tagName) ? '' : `</${tagName}>`
+      }
+
+      if (VOID_HTML_TAGS.has(tagName)) {
+        return `<${tagName}>`
+      }
+
+      return `<${tagName}${sanitizeHtmlAttributes(tagName, rawAttributes)}>`
+    }
+  )
 }
 
 export function getCompactTimerName(value: string): string {
@@ -236,10 +373,11 @@ export function createNoteView(card: CardRecord): NoteView {
   try {
     const parsed = JSON.parse(card.description) as unknown
     if (isStoredNoteDescription(parsed)) {
-      const summary = getSummaryFromHtml(parsed.html)
+      const html = sanitizeNoteHtml(parsed.html)
+      const summary = getSummaryFromHtml(html)
       return {
         ...card,
-        html: parsed.html,
+        html,
         pinned: parsed.pinned,
         summary: summary || card.title,
         timers: normalizeTimers(parsed.timers)

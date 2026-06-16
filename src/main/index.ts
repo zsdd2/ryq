@@ -9,6 +9,7 @@ import {
   deleteCard,
   deleteColumn,
   getFloatingWindowState,
+  getAllNotes,
   getLaunchOnStartupPreference,
   getWorkspace,
   initializeDatabase,
@@ -325,6 +326,7 @@ function setFloatingWindowMode(mode: FloatingWindowMode): void {
 
 function registerIpc(): void {
   ipcMain.handle('workspace:get', () => getWorkspace())
+  ipcMain.handle('workspace:getAllNotes', () => getAllNotes())
   ipcMain.handle('workspace:searchNotes', (_event, query: string) => searchNotes(query))
   ipcMain.handle('board:create', (_event, draft: BoardDraft) => createBoard(draft))
   ipcMain.handle('board:update', (_event, boardId: string, draft: BoardDraft) => updateBoard(boardId, draft))
