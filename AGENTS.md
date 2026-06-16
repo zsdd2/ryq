@@ -40,7 +40,7 @@ Agents should stay aligned with these project-level decisions:
 - Renderer-managed drag and drop
 - Offline-first local architecture
 - Local SQLite database as source of truth
-- Current runtime is local-only; synced-folder sync code is legacy/dormant
+- Current runtime is local-only; synced-folder sync implementation code has been removed
 - Restoring sync, multi-device behavior, or remote conflict handling requires a new recorded decision
 - AI-assisted development by default, with manual edits allowed when appropriate
 - Current product line must remain local-first and exclude Google sync, OAuth, accounts, and external infrastructure
@@ -58,7 +58,7 @@ Agents should stay aligned with these project-level decisions:
    Do not redesign persistence around remote-first assumptions.
 
 4. Do not introduce or restore sync behavior without an explicit product decision.
-   The old synced-folder implementation is dormant. If a change would remove, restore, or alter sync/provider/checkpoint/conflict behavior, record it in [`DECISIONS.md`](./DECISIONS.md) as part of the same work.
+   The old synced-folder implementation has been removed. If a change would restore or redesign sync/provider/checkpoint/conflict behavior, record it in [`DECISIONS.md`](./DECISIONS.md) as part of the same work.
 
 5. Keep the implementation scope intentionally narrow.
    Do not add provider APIs, OAuth, paid services, or managed cloud dependencies unless the documented project direction changes.
@@ -111,7 +111,7 @@ Unless the repository later defines a different rule:
 - Use UUIDs for entity identifiers
 - Prefer soft deletes where local recovery safety matters
 - Avoid blocking the UI during update checks or background work
-- Protect local data from reinstall, update, migration, and dormant-sync cleanup failures
+- Protect local data from reinstall, update, migration, and sync-compatibility cleanup failures
 - Keep naming and module boundaries consistent with the planned app/main/renderer split
 - Assume AI-assisted implementation is the preferred delivery path unless the user explicitly requests otherwise
 - Assume the current runtime is local-only unless a newer decision explicitly restores sync

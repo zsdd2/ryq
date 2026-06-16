@@ -25,7 +25,7 @@ The current runnable app includes:
 - Stable packaged Windows data path at `%APPDATA%/renyiqian/data/renyiqian.db`
 - Packaged Windows update checks through GitHub Releases and `electron-updater`
 
-The active main process exposes sync IPC calls only as local-only compatibility responses. The older synced-folder implementation and tests remain in the repository as legacy/dormant code until they are removed or explicitly restored by a future product decision.
+The active main process exposes sync IPC calls only as local-only compatibility responses. The older synced-folder implementation and sync-risk regression tests have been removed; restoring sync requires a new product decision and fresh implementation plan.
 
 ## Product Direction
 
@@ -106,7 +106,7 @@ The Windows packaged path is intentionally stable across reinstall and update fl
 
 The current app implementation lives mainly in:
 
-- `src/main/`: Electron main process, SQLite persistence, window behavior, update service, and legacy sync code
+- `src/main/`: Electron main process, SQLite persistence, window behavior, update service, and local-only sync compatibility handlers
 - `src/preload/`: renderer-safe IPC bridge
 - `src/renderer/`: React floating note UI
 - `src/shared/`: shared IPC/data types
@@ -117,7 +117,7 @@ The current app implementation lives mainly in:
 For the detailed roadmap, see [`ROADMAP.md`](./ROADMAP.md).
 
 - Current: local floating notes, grouped SQLite persistence, rich editing, templates, search, timers, reminders, Windows startup preference, and packaged Windows update checks
-- Next: audit-driven repair work, including reminder correctness, rich HTML sanitization, documentation/runtime consistency, legacy sync/store cleanup, test-runner shutdown cleanup, and live UI smoke checks
+- Next: audit-driven repair work, including live UI smoke checks, dependency upgrades, and local data durability improvements
 - Future: tray integration, themes, export/import, local backup recovery UX, and only explicitly approved sync or companion-app scope
 
 ## Repository Documents

@@ -64,8 +64,9 @@ describe('searchNotes', () => {
     })
 
     const notes = getAllNotes()
+    const notesByTitle = [...notes].sort((first, second) => first.title.localeCompare(second.title))
 
-    expect(notes.map((note) => note.title)).toEqual(['会员到期提醒', '默认分组提醒'])
-    expect(notes.map((note) => note.boardTitle)).toEqual(['会员账号', '默认分组'])
+    expect(notesByTitle.map((note) => note.title)).toEqual(['会员到期提醒', '默认分组提醒'])
+    expect(notesByTitle.map((note) => note.boardTitle)).toEqual(['会员账号', '默认分组'])
   })
 })

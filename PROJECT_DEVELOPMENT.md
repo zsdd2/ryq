@@ -552,10 +552,10 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 - The global Node runtime is v24.13.0 and is not suitable for this baseline because `better-sqlite3@9.6.0` falls back to native compilation.
 - The machine does not currently expose a usable MSVC C++ toolset for `node-gyp` fallback builds.
 - `npm install` completed only after `LOCALAPPDATA` was redirected to the project directory so Electron could cache its binary locally.
-- Current audit state:
-  - `npm audit --omit=dev` reports 2 moderate production vulnerabilities through `electron-updater -> js-yaml`.
-  - Full `npm audit` reports 58 total vulnerabilities: 8 low, 30 moderate, 19 high, and 1 critical. The critical item is in the dev/test chain through Vitest/Vite.
-  - Do not run forced audit fixes inline with feature work; Electron, Vite, Vitest, builder, and native dependency upgrades need a dedicated verification batch.
+- Historical audit state before version `1.5.0`:
+  - `npm audit --omit=dev` reported 2 moderate production vulnerabilities through `electron-updater -> js-yaml`.
+  - Full `npm audit` reported 58 total vulnerabilities: 8 low, 30 moderate, 19 high, and 1 critical.
+  - Version `1.5.0` resolved these audit findings with a dedicated Electron/Vite/Vitest/builder/native dependency upgrade batch.
 
 ## Current Modification Goal - Full CodeGraph And Code Audit
 
@@ -681,13 +681,13 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 
 - Implemented and verified.
 - Removed the unused legacy renderer Zustand store at `src/renderer/src/store.ts`.
-- Removed the stale sync-risk regression that imported the deleted renderer store; the remaining sync-risk tests continue to cover dormant operation-log behavior.
+- Removed the stale sync-risk regression that imported the deleted renderer store.
 - Removed the unused `zustand` package from `package.json` and `package-lock.json`.
-- Kept `src/main/sync.ts` in place as dormant legacy code because deleting it needs a dedicated replacement-test pass.
+- Superseded by version `1.5.0`: `src/main/sync.ts` and `src/main/sync-risk.spec.ts` have now been removed.
 - Verification passed:
   - `rg` found no remaining `useBoardStore`, `zustand`, or renderer-store imports in source or package manifests.
   - `npm run typecheck`
-  - `npm test -- src/main/sync-risk.spec.ts` passed: 1 test file, 8 tests.
+  - Historical targeted check before full sync removal: `npm test -- src/main/sync-risk.spec.ts` passed: 1 test file, 8 tests.
   - `npm test` passed: 10 test files, 49 tests.
   - `npm run build`
 - Verification caveat:
@@ -752,3 +752,67 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
   - `npm run release:version`
   - `npm run build`
   - `codegraph sync` reported the index is up to date.
+
+## Current Modification Goal - Version 1.5.0 Audit Closure
+
+- Reconfirm why the desktop updater can report `1.4.9` while package metadata still showed `1.4.7`.
+- Finish the remaining unresolved audit items:
+  - remove the old synced-folder implementation dead path;
+  - remove the Vitest `close timed out after 10000ms` shutdown warning;
+  - clear production and full dependency audit findings.
+- Advance package metadata to `1.5.0` and push the release-ready code.
+
+## Current Status
+
+- Verified.
+- `git fetch --tags` confirmed `v1.4.8` and `v1.4.9` already exist remotely.
+- `v1.4.9` points at commit `3a9c7c1`, but that commit's package metadata still reported `1.4.7`; this explains the desktop/updater version mismatch.
+- Removed `src/main/sync.ts` and `src/main/sync-risk.spec.ts`; current sync IPC remains local-only compatibility behavior.
+- Updated README, README.pt-BR, SPEC, IMPLEMENTATION, DECISIONS, and AGENTS so they no longer claim the legacy synced-folder implementation still remains.
+- Reworked the Vitest runner so Electron tests exit immediately after Vitest reports results instead of waiting for the internal Vite close timeout.
+- Upgraded the build/test dependency chain:
+  - Electron `42.4.0`
+  - electron-builder `26.15.3`
+  - electron-vite `5.0.0`
+  - Vite `7.3.5`
+  - Vitest `4.1.9`
+  - @vitejs/plugin-react `5.2.0`
+  - better-sqlite3 `12.11.1`
+- Added a project-local Electron/Vitest launcher so tests use project-local cache paths for Electron downloads.
+- `package.json` and `package-lock.json` now report version `1.5.0`.
+- Verification passed so far:
+  - `npm audit --omit=dev` reports 0 vulnerabilities.
+  - `npm audit` reports 0 vulnerabilities.
+  - `npm run typecheck`
+  - `npm test` passed: 9 test files, 41 tests, with no `close timed out` warning.
+  - `npm run build`
+  - `npm run site:build`
+  - `npm run dist:win`
+- Verification caveat:
+  - Final CodeGraph sync was attempted, but the `codegraph` CLI is not available in the current PowerShell PATH and no callable CodeGraph sync tool is exposed in this Codex session.
+- Release artifacts:
+  - `dist/renyiqian-setup-1.5.0.exe`
+  - `dist/renyiqian-setup-1.5.0.exe.blockmap`
+
+## Future Modification Plan
+
+1. Commit and push version `1.5.0`.
+2. Add live Electron UI smoke coverage for launcher, floating note creation, editing, grouping, search, timer display, reminder scan, and update-status controls.
+3. Add local backup/export/import:
+   - scheduled SQLite backups;
+   - manual export/import from settings;
+   - restore validation before replacing local data.
+4. Add reminder UX improvements:
+   - snooze;
+   - reminder history;
+   - recurring reminder presets;
+   - per-group reminder filters.
+5. Add local productivity polish:
+   - tray quick actions;
+   - startup setting;
+   - opacity and always-on-top controls;
+   - themes and note color presets.
+6. Add data-model cleanup after compatibility coverage exists:
+   - replace legacy board/card naming with explicit note/category naming;
+   - keep migrations and backup recovery safe.
+7. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.

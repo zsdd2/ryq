@@ -25,7 +25,7 @@ O app executavel atual inclui:
 - Caminho estavel de dados no Windows empacotado: `%APPDATA%/renyiqian/data/renyiqian.db`
 - Verificacao de atualizacoes no Windows via GitHub Releases e `electron-updater`
 
-O main process ativo expoe chamadas IPC de sync apenas como respostas locais de compatibilidade. A implementacao antiga de sync por pasta sincronizada e seus testes continuam no repositorio como codigo legado/dormant ate serem removidos ou restaurados por uma decisao futura de produto.
+O main process ativo expoe chamadas IPC de sync apenas como respostas locais de compatibilidade. A implementacao antiga de sync por pasta sincronizada e os testes sync-risk foram removidos; restaurar sync exige uma nova decisao de produto e um plano de implementacao novo.
 
 ## Direcao do produto
 

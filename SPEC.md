@@ -38,7 +38,7 @@ The following are not active runtime capabilities:
 - Managed backend infrastructure
 - Mobile companion app
 
-Legacy synced-folder sync code remains in the repository, but the active main process currently exposes sync IPC as local-only compatibility responses. Treat that code as dormant until a future decision explicitly removes or restores it.
+Legacy synced-folder sync code has been removed from the repository. The active main process still exposes sync IPC as local-only compatibility responses so older renderer/API callers do not crash. Treat sync as absent from the active product until a future decision explicitly restores it.
 
 ## Usage
 
@@ -144,8 +144,8 @@ Current priority:
 - Reminder correctness
 - Rich HTML sanitization
 - Documentation/runtime consistency
-- Legacy sync/store cleanup
-- Test-runner shutdown cleanup
+- Live UI smoke verification
+- Dependency security upgrade
 - Live UI smoke verification
 
 Future product work:

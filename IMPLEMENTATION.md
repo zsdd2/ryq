@@ -13,7 +13,7 @@ This document tracks the real implementation state of the repository and the hig
 - Product specification exists in [`SPEC.md`](./SPEC.md).
 - Architecture and workflow guidance exists in [`DECISIONS.md`](./DECISIONS.md) and [`AGENTS.md`](./AGENTS.md).
 - A root-level convenience script now exists for fast-forwarding the local `main` branch from the remote repository when the working tree is clean.
-- The current Renyiqian runtime is local-first and keeps synced-folder behavior disabled behind local-only compatibility IPC handlers.
+- The current Renyiqian runtime is local-first and keeps sync behavior disabled behind local-only compatibility IPC handlers.
 
 ## Implemented Milestones
 
@@ -39,7 +39,7 @@ This document tracks the real implementation state of the repository and the hig
 - Columns now support inline rename on click, drag-and-drop reordering inside the active board, and moving an entire column to another board through board-tab drop targets
 - Card dragging now uses pointer-driven interaction instead of native HTML drag, with a custom ghost preview and more tolerant reordering inside and across columns in the active board
 - The renderer footer now shows the runtime app version reported by Electron so packaged builds can display the same version number used by automated releases
-- Synced-folder cloud sync code and regression tests remain in the repository as legacy/dormant code, but the active Renyiqian main process currently exposes local-only sync compatibility responses
+- Synced-folder cloud sync implementation code and sync-risk regression tests have been removed; the active Renyiqian main process currently exposes only local-only sync compatibility responses
 - GitHub release/version automation configured for `main`
 - Windows release packaging simplified to NSIS installer only
 - Packaged Windows builds now use in-app update checks backed by GitHub Releases and `electron-updater`, including background download and restart-to-install flow
@@ -61,10 +61,10 @@ This document tracks the real implementation state of the repository and the hig
 
 - The current codebase implements a local-first floating desktop note app under the Renyiqian product direction
 - The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminders, drag ordering, startup preference, and packaged GitHub Releases update checks
-- The next major step is audit-driven bug repair: inactive-group reminder delivery, note HTML sanitization, product documentation consistency, dead legacy path cleanup, test-runner shutdown cleanup, and live UI smoke verification
-- The repository still includes sync-risk regression coverage for legacy code, but current runtime sync behavior is local-only
+- The next major step is live UI smoke verification, dependency security upgrades, and local data durability improvements
+- Current runtime sync behavior is local-only; historical synced-folder implementation code is no longer present
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current local package metadata is `1.4.6`; the latest locally recorded release artifact is `dist/renyiqian-setup-1.4.6.exe`
+- The current local package metadata is being advanced for the next release; release artifacts should be regenerated after version `1.5.0` is committed.
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet
@@ -77,4 +77,4 @@ This document tracks the real implementation state of the repository and the hig
 - This file records actual repository state and completed milestones.
 - Future goals and planning belong in [`ROADMAP.md`](./ROADMAP.md).
 - Architectural decisions belong in [`DECISIONS.md`](./DECISIONS.md).
-- Remote sync is not part of the current active Renyiqian runtime unless a future product decision explicitly restores it.
+- Remote sync is not part of the current active Renyiqian runtime. Restoring it requires a future product decision and a new implementation plan.

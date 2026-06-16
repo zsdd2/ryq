@@ -1,3 +1,10 @@
-process.argv = process.argv.filter((argument) => argument !== '--run-as-node' && argument !== '--no-sandbox')
+import { parseCLI, startVitest } from 'vitest/node'
 
-await import('../../node_modules/vitest/vitest.mjs')
+const args = process.argv.filter((argument) => argument !== '--run-as-node' && argument !== '--no-sandbox')
+const cli = parseCLI(['vitest', ...args.slice(2)])
+const ctx = await startVitest('test', cli.filter, cli.options)
+
+const failedTests = ctx?.state.getCountOfFailedTests() ?? 0
+const unhandledErrors = ctx?.state.getUnhandledErrors().length ?? 0
+
+process.exit(failedTests > 0 || unhandledErrors > 0 ? 1 : 0)

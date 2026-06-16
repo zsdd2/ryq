@@ -1,7 +1,7 @@
 {
   "name": "renyiqian",
   "productName": "任意签",
-  "version": "1.4.7",
+  "version": "1.5.0",
   "description": "A floating desktop note app.",
   "main": "out/main/index.js",
   "author": "Ivan Yort <ivan.yort@gmail.com>",
@@ -11,7 +11,7 @@
     "dev:root": "npm run build && electron --no-sandbox out/main/index.js",
     "start": "electron-vite preview",
     "start:root": "electron --no-sandbox out/main/index.js",
-    "test": "electron --no-sandbox --run-as-node ./scripts/tests/run-vitest.mjs run",
+    "test": "node ./scripts/tests/run-electron-vitest.mjs run",
     "site:dev": "vite --config site/vite.config.ts",
     "site:build": "vite build --config site/vite.config.ts",
     "typecheck": "tsc --noEmit",
@@ -31,7 +31,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/geist": "^5.2.8",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
-    "better-sqlite3": "^9.6.0",
+    "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-updater": "^6.3.9",
@@ -45,15 +45,18 @@
     "@types/node": "^20.17.24",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.20",
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3",
-    "electron-vite": "1.0.29",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
-    "vite": "^4.5.9",
-    "vitest": "^1.6.0"
+    "vite": "^7.3.5",
+    "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }
