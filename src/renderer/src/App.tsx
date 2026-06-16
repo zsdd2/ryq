@@ -35,6 +35,7 @@ import {
   normalizeTimerQuota,
   refreshQuickTimer,
   resolveTimerDueAt,
+  snoozeFiredTimers,
   type NoteTimerQuickPreset,
   type NoteTimerRepeat,
   type NoteTimer,
@@ -54,6 +55,8 @@ import { getNoteDropIndex, type DropPlacement } from './note-order'
 const TEMPLATE_STORAGE_KEY = 'renyiqian.noteTemplateText'
 const TEMPLATE_COLUMNS_STORAGE_KEY = 'renyiqian.noteTemplateColumnsText'
 const TEMPLATE_SELECTED_STORAGE_KEY = 'renyiqian.selectedTemplateId'
+const REMINDER_HISTORY_STORAGE_KEY = 'renyiqian.reminderHistory'
+const REMINDER_HISTORY_LIMIT = 50
 const DEFAULT_TEMPLATE_TEXT = '客户\n电话\n事项\n备注'
 const DEFAULT_TEMPLATE_COLUMNS_TEXT = '内容'
 const LAUNCHER_DRAG_HOLD_MS = 220
@@ -63,14 +66,50 @@ const QUICK_TIMER_PRESETS: Array<{ id: NoteTimerQuickPreset; label: string }> = 
   { id: 'weekly', label: '7天' },
   { id: 'five-hour', label: '5小时' }
 ]
+const REMINDER_SNOOZE_OPTIONS = [
+  { label: '10分钟后', delayMs: 10 * 60 * 1000 },
+  { label: '1小时后', delayMs: 60 * 60 * 1000 },
+  { label: '明天', delayMs: 24 * 60 * 60 * 1000 }
+]
 
 interface ReminderNotice {
   noteId: string
   timerIds: string[]
+  timerNames: string[]
+  noteTitle: string
+  boardTitle?: string
   message: string
+  firedAt: number
 }
 
-type ReminderNoteView = NoteView & Pick<NoteSearchResult, 'boardId' | 'boardTitle' | 'columnTitle'>
+interface ReminderHistoryEntry {
+  id: string
+  noteId: string
+  noteTitle: string
+  boardTitle?: string
+  timerNames: string[]
+  message: string
+  action: 'confirmed' | 'snoozed'
+  actionLabel: string
+  triggeredAt: number
+  handledAt: number
+}
+
+type ReminderNoteView = NoteView & Partial<Pick<NoteSearchResult, 'boardId' | 'boardTitle' | 'columnTitle'>>
+
+function readStoredReminderHistory(): ReminderHistoryEntry[] {
+  try {
+    const storedHistory = window.localStorage.getItem(REMINDER_HISTORY_STORAGE_KEY)
+    const parsed = storedHistory ? (JSON.parse(storedHistory) as unknown) : []
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((entry): entry is ReminderHistoryEntry => Boolean(entry) && typeof entry === 'object')
+          .slice(0, REMINDER_HISTORY_LIMIT)
+      : []
+  } catch {
+    return []
+  }
+}
 
 function App(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
@@ -83,6 +122,8 @@ function App(): JSX.Element {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [updateNotice, setUpdateNotice] = useState<string | null>(null)
   const [reminderNotice, setReminderNotice] = useState<ReminderNotice | null>(null)
+  const [reminderHistory, setReminderHistory] = useState<ReminderHistoryEntry[]>(readStoredReminderHistory)
+  const [showReminderHistory, setShowReminderHistory] = useState(false)
   const [selectedNote, setSelectedNote] = useState<NoteView | null>(null)
   const [showQuickAddInput, setShowQuickAddInput] = useState(false)
   const [showTemplatePanel, setShowTemplatePanel] = useState(false)
@@ -153,6 +194,7 @@ function App(): JSX.Element {
   const canDownloadUpdate = updateStatus?.phase === 'available'
   const canInstallUpdate = updateStatus?.phase === 'downloaded'
   const isDownloadingUpdate = updateStatus?.phase === 'downloading'
+  const reminderButtonCount = (reminderNotice ? 1 : 0) + reminderHistory.length
 
   useEffect(() => {
     if (showQuickAddInput) {
@@ -181,6 +223,48 @@ function App(): JSX.Element {
         title: `${timer.name}${timer.quota ? ` ${timer.quota}` : ''} ${new Date(dueAt).toLocaleString()}`
       }
     })
+  }
+
+  function buildReminderNotice(note: ReminderNoteView, firedTimers: NoteTimer[], firedAt = Date.now()): ReminderNotice {
+    const timerNames = firedTimers.map((timer) => timer.name)
+    const noteTitle = note.summary || note.title
+
+    return {
+      noteId: note.id,
+      timerIds: firedTimers.map((timer) => timer.id),
+      timerNames,
+      noteTitle,
+      boardTitle: note.boardTitle,
+      message: `便签提醒：${timerNames.join('、')}`,
+      firedAt
+    }
+  }
+
+  function addReminderHistory(notice: ReminderNotice, action: ReminderHistoryEntry['action'], actionLabel: string): void {
+    const handledAt = Date.now()
+    const entry: ReminderHistoryEntry = {
+      id: `${notice.noteId}-${notice.firedAt}-${handledAt}-${action}`,
+      noteId: notice.noteId,
+      noteTitle: notice.noteTitle,
+      boardTitle: notice.boardTitle,
+      timerNames: notice.timerNames,
+      message: notice.message,
+      action,
+      actionLabel,
+      triggeredAt: notice.firedAt,
+      handledAt
+    }
+
+    setReminderHistory((currentHistory) => [entry, ...currentHistory].slice(0, REMINDER_HISTORY_LIMIT))
+  }
+
+  function clearReminderHistory(): void {
+    setReminderHistory([])
+    try {
+      window.localStorage.removeItem(REMINDER_HISTORY_STORAGE_KEY)
+    } catch {
+      // Ignore storage failures; the in-memory history is already cleared.
+    }
   }
 
   function getAccountTemplateCustomRows(): string[] {
@@ -616,8 +700,45 @@ function App(): JSX.Element {
     }
 
     const nextTimers = acknowledgeFiredTimers(note.timers, reminderNotice.timerIds, Date.now())
+    addReminderHistory(reminderNotice, 'confirmed', '已确认')
     await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
     setReminderNotice(null)
+    setShowReminderHistory(false)
+  }
+
+  async function confirmReminderForNote(note: ReminderNoteView): Promise<void> {
+    const firedTimers = note.timers.filter((timer) => timer.status === 'fired')
+    if (firedTimers.length === 0) {
+      return
+    }
+
+    const notice = buildReminderNotice(note, firedTimers)
+    const nextTimers = acknowledgeFiredTimers(note.timers, notice.timerIds, Date.now())
+    addReminderHistory(notice, 'confirmed', '已确认')
+    await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+    if (reminderNotice?.noteId === note.id) {
+      setReminderNotice(null)
+    }
+    setShowReminderHistory(false)
+  }
+
+  async function snoozeReminder(delayMs: number, label: string): Promise<void> {
+    if (!reminderNotice || !workspace) {
+      return
+    }
+
+    const note = (await getAllReminderNotes()).find((candidate) => candidate.id === reminderNotice.noteId)
+
+    if (!note) {
+      setReminderNotice(null)
+      return
+    }
+
+    const nextTimers = snoozeFiredTimers(note.timers, reminderNotice.timerIds, delayMs, Date.now())
+    addReminderHistory(reminderNotice, 'snoozed', `稍后提醒：${label}`)
+    await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+    setReminderNotice(null)
+    setShowReminderHistory(false)
   }
 
   async function saveSelectedNote(note: NoteView): Promise<void> {
@@ -858,6 +979,14 @@ function App(): JSX.Element {
   }, [selectedTemplateId])
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(REMINDER_HISTORY_STORAGE_KEY, JSON.stringify(reminderHistory))
+    } catch {
+      // Local reminder history is a convenience cache; storage failures should not block note use.
+    }
+  }, [reminderHistory])
+
+  useEffect(() => {
     const groupIds = new Set(groups.map((group) => group.id))
     setSelectedGroupIds((currentIds) => {
       const nextIds = currentIds.filter((groupId) => groupIds.has(groupId))
@@ -899,11 +1028,7 @@ function App(): JSX.Element {
             return
           }
           const firedTimers = firedNote.timers.filter((timer) => timer.status === 'fired')
-          setReminderNotice({
-            noteId: firedNote.id,
-            timerIds: firedTimers.map((timer) => timer.id),
-            message: `便签提醒：${firedTimers.map((timer) => timer.name).join('、')}`
-          })
+          setReminderNotice(buildReminderNotice(firedNote, firedTimers, now))
           return
         }
 
@@ -920,11 +1045,7 @@ function App(): JSX.Element {
         if (disposed) {
           return
         }
-        setReminderNotice({
-          noteId: dueNote.id,
-          timerIds: dueTimers.map((timer) => timer.id),
-          message: `便签提醒：${dueTimers.map((timer) => timer.name).join('、')}`
-        })
+        setReminderNotice(buildReminderNotice(dueNote, dueTimers, now))
       } finally {
         checking = false
       }
@@ -1048,9 +1169,64 @@ function App(): JSX.Element {
                 ? '安装更新'
                 : isDownloadingUpdate
                   ? `${updateProgress ?? 0}%`
-                  : '下载更新'}
+              : '下载更新'}
             </span>
           </button>
+          <div className="reminder-history-anchor">
+            <button
+              type="button"
+              className={reminderButtonCount > 0 ? 'icon-button reminder-history-button active' : 'icon-button reminder-history-button'}
+              onClick={() => setShowReminderHistory((currentValue) => !currentValue)}
+              aria-label="查看提醒历史"
+              title="提醒历史"
+            >
+              <AlertCircle size={14} />
+              {reminderButtonCount > 0 ? <span className="reminder-history-count">{reminderButtonCount}</span> : null}
+            </button>
+            {showReminderHistory ? (
+              <section className="reminder-history-panel" aria-label="提醒历史">
+                <header className="reminder-history-header">
+                  <strong>提醒</strong>
+                  <button type="button" onClick={clearReminderHistory} disabled={reminderHistory.length === 0}>
+                    清空
+                  </button>
+                </header>
+                {reminderNotice ? (
+                  <div className="reminder-current">
+                    <div className="reminder-current-title">{reminderNotice.message}</div>
+                    <div className="reminder-current-meta">{reminderNotice.noteTitle}</div>
+                    <div className="reminder-current-actions">
+                      {REMINDER_SNOOZE_OPTIONS.map((option) => (
+                        <button
+                          type="button"
+                          key={option.label}
+                          onClick={() => void snoozeReminder(option.delayMs, option.label)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                      <button type="button" className="primary-mini" onClick={() => void confirmReminder()}>
+                        确认
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="reminder-history-list">
+                  {reminderHistory.length > 0 ? (
+                    reminderHistory.map((entry) => (
+                      <div className="reminder-history-item" key={entry.id}>
+                        <strong>{entry.noteTitle}</strong>
+                        <span>{entry.actionLabel}</span>
+                        <small>{new Date(entry.handledAt).toLocaleString()}</small>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="reminder-history-empty">暂无历史提醒</div>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </div>
           <button type="button" className="icon-button" onClick={() => void window.stickban.setAlwaysOnTop(true)} aria-label="保持置顶">
             <Pin size={14} />
           </button>
@@ -1138,13 +1314,6 @@ function App(): JSX.Element {
             </div>
           ) : null}
         </div>
-      ) : null}
-
-      {reminderNotice ? (
-        <button type="button" className="reminder-bubble" onClick={() => void confirmReminder()} aria-label="确认便签提醒">
-          <AlarmClock size={14} />
-          <span>{reminderNotice.message}，点击确认</span>
-        </button>
       ) : null}
 
       {showTemplatePanel ? (
@@ -1344,6 +1513,21 @@ function App(): JSX.Element {
                 <button type="button" className="note-pin" onClick={() => void togglePinned(note)} aria-label={note.pinned ? '取消置顶' : '置顶便签'}>
                   {note.pinned ? <Pin size={14} /> : <PinOff size={14} />}
                 </button>
+                {note.timers.some((timer) => timer.status === 'fired') ? (
+                  <button
+                    type="button"
+                    className="note-reminder-chip"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void confirmReminderForNote(note)
+                    }}
+                    aria-label="确认这条便签提醒"
+                    title="点击确认并收入提醒历史"
+                  >
+                    <AlertCircle size={12} />
+                    <span>提醒</span>
+                  </button>
+                ) : null}
                 <button type="button" className="note-preview-button" onClick={() => void openSearchResult(note)}>
                   {'boardTitle' in note && typeof note.boardTitle === 'string' ? <span className="note-search-badge">{note.boardTitle}</span> : null}
                   <div className="note-preview" dangerouslySetInnerHTML={{ __html: note.html }} />

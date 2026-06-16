@@ -803,8 +803,6 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
    - manual export/import from settings;
    - restore validation before replacing local data.
 4. Add reminder UX improvements:
-   - snooze;
-   - reminder history;
    - recurring reminder presets;
    - per-group reminder filters.
 5. Add local productivity polish:
@@ -816,3 +814,39 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
    - replace legacy board/card naming with explicit note/category naming;
    - keep migrations and backup recovery safe.
 7. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Reminder UX Consolidation
+
+- Move due reminder interaction away from the old bottom bubble.
+- Keep fired reminders visible on the relevant note card near the card's top-right area.
+- Add a top-right exclamation reminder entry that collects current reminders and reminder history.
+- Support reminder snooze actions and clearable local reminder history.
+
+## Current Status
+
+- Implemented and verified locally.
+- Added a tested `snoozeFiredTimers` helper so fired timers can be rescheduled to a later due time.
+- Added top-right reminder history state persisted in `localStorage` under `renyiqian.reminderHistory`, capped to the latest 50 entries.
+- Added current reminder actions behind the top-right exclamation entry:
+  - `10分钟后`
+  - `1小时后`
+  - `明天`
+  - `确认`
+- Added card-level `note-reminder-chip` on fired reminder cards; clicking it confirms that note's fired timers and records the action into history.
+- Removed the old bottom `reminder-bubble` presentation.
+- Advanced package metadata to `1.6.0` so the next pushed feature release keeps source metadata aligned with the automated desktop release version.
+- Verification passed:
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `npm test -- src/renderer/src/note-content.spec.ts src/renderer/src/app-layout.spec.ts`
+  - `npm run typecheck`
+  - `npm test`
+  - `npm run build`
+  - `npm run site:build`
+  - `git diff --check`
+  - `C:\Users\Administrator\AppData\Local\codegraph\current\bin\codegraph.cmd sync` completed; final run reported `Already up to date`.
+
+## Future Modification Plan
+
+1. Add live Electron UI smoke coverage for reminder history open/clear, card reminder confirmation, and snooze actions.
+2. Continue with local backup/export/import as the next high-impact feature.
+3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.

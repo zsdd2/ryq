@@ -10,7 +10,7 @@ Renyiqian is a compact local-first desktop note app. It is designed to stay visi
 - Grouped notes with rich text content
 - Table/account templates for repeated local records
 - Global local search
-- Per-note timers, reminder acknowledgement, quick countdown presets, and quota editing
+- Per-note timers, reminder acknowledgement, snooze, reminder history, quick countdown presets, and quota editing
 - Packaged Windows update checks through GitHub Releases
 
 ## Current Repository Reality
@@ -49,7 +49,7 @@ Legacy synced-folder sync code has been removed from the repository. The active 
 - Open a note to edit rich content
 - Generate table/account template notes
 - Add timers to notes
-- Confirm reminder bubbles when timers fire
+- Confirm or snooze reminders from the top-right reminder entry when timers fire
 - Collapse the panel back to the floating launcher
 - Optionally enable launch on Windows login in packaged Windows builds
 - Install packaged Windows updates after they are downloaded

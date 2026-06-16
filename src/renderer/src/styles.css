@@ -571,30 +571,163 @@ button:disabled {
   transition: width 0.18s ease;
 }
 
-.reminder-bubble {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  z-index: 15;
-  display: inline-flex;
-  max-width: min(360px, calc(100vw - 36px));
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgb(255 204 116 / 70%);
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgb(255 249 235 / 98%), rgb(255 241 211 / 96%));
-  padding: 9px 13px;
-  color: rgb(151 89 10);
-  font-size: 12px;
-  font-weight: 800;
-  box-shadow: 0 16px 42px rgb(190 122 24 / 20%);
+.reminder-history-anchor {
+  position: relative;
+  -webkit-app-region: no-drag;
 }
 
-.reminder-bubble span {
+.reminder-history-button {
+  position: relative;
+}
+
+.reminder-history-button.active {
+  background: rgb(255 244 229);
+  color: rgb(202 103 15);
+  box-shadow: inset 0 0 0 1px rgb(255 197 122 / 72%);
+}
+
+.reminder-history-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid white;
+  border-radius: 999px;
+  background: rgb(240 96 27);
+  color: white;
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.reminder-history-panel {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  z-index: 22;
+  width: min(330px, calc(100vw - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgb(220 231 250 / 92%);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(255 246 231 / 96%), transparent 36%),
+    linear-gradient(180deg, rgb(255 255 255 / 98%), rgb(248 251 255 / 98%));
+  padding: 10px;
+  color: var(--foreground);
+  box-shadow: 0 18px 44px rgb(55 84 150 / 22%);
+}
+
+.reminder-history-header,
+.reminder-current-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reminder-history-header strong {
+  font-size: 12px;
+}
+
+.reminder-history-header button,
+.reminder-current-actions button {
+  height: 24px;
+  border-radius: 7px;
+  background: rgb(236 243 255);
+  padding: 0 8px;
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.reminder-current {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgb(255 204 116 / 72%);
+  border-radius: 10px;
+  background: rgb(255 248 235 / 92%);
+  padding: 8px;
+}
+
+.reminder-current-title {
+  color: rgb(151 89 10);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.reminder-current-meta {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-current-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.reminder-current-actions .primary-mini {
+  background: linear-gradient(135deg, rgb(255 152 54), rgb(236 88 33));
+  color: white;
+}
+
+.reminder-history-list {
+  display: flex;
+  max-height: 190px;
+  flex-direction: column;
+  gap: 6px;
+  overflow: auto;
+}
+
+.reminder-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  border-radius: 9px;
+  background: rgb(246 249 255 / 88%);
+  padding: 7px 8px;
+}
+
+.reminder-history-item strong,
+.reminder-history-item span,
+.reminder-history-item small {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reminder-history-item strong {
+  font-size: 11px;
+}
+
+.reminder-history-item span {
+  color: rgb(202 103 15);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.reminder-history-item small {
+  grid-column: 1 / -1;
+  color: var(--muted-foreground);
+  font-size: 9.5px;
+}
+
+.reminder-history-empty {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  border: 1px dashed rgb(220 231 250);
+  border-radius: 9px;
+  color: var(--muted-foreground);
+  font-size: 11px;
 }
 
 .note-workspace {
@@ -742,6 +875,7 @@ button:disabled {
 }
 
 .note-card {
+  position: relative;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) minmax(132px, 145px) 24px;
   align-items: start;
@@ -770,7 +904,30 @@ button:disabled {
   border-color: rgb(255 159 110);
   background:
     linear-gradient(180deg, rgb(255 244 235 / 98%), rgb(255 249 242 / 96%));
+  padding-top: 28px;
   box-shadow: 0 10px 28px rgb(229 103 42 / 18%);
+}
+
+.note-reminder-chip {
+  position: absolute;
+  top: 6px;
+  right: 34px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgb(255 181 101 / 78%);
+  border-radius: 999px;
+  background: rgb(255 248 235 / 96%);
+  padding: 0 7px;
+  color: rgb(177 89 11);
+  font-size: 10px;
+  font-weight: 850;
+  box-shadow: 0 8px 16px rgb(190 122 24 / 14%);
+}
+
+.note-reminder-chip:hover {
+  background: rgb(255 239 211);
 }
 
 .note-pin,

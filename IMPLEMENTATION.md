@@ -52,7 +52,8 @@ This document tracks the real implementation state of the repository and the hig
 - The 任意签 fork currently builds a compact floating-note experience with a logo-only collapsed launcher, grouped local notes, rich note editing, global search, table-template notes, a Windows startup toggle, and packaged GitHub Releases update checks through `electron-updater`
 - The Windows packaged app now pins its canonical local data directory to `%APPDATA%/renyiqian` and migrates legacy `%APPDATA%/任意签` or `%APPDATA%/Stickban` databases only when the canonical database has no user notes
 - Collapsing the note panel back to launcher mode now explicitly restores, shows, raises, and centers the 88x88 logo launcher instead of letting the window stay hidden or shrink from an unsafe position
-- Note cards now clamp rich previews to two lines, show compact per-note countdown rows on the right side, support direct card-level pin toggling, and keep timer notices behind a small hoverable alert icon
+- Note cards now clamp rich previews to two lines, show compact per-note countdown rows on the right side, support direct card-level pin toggling, and keep fired reminders visible on the alert card until the user confirms them
+- Timer reminders now collect behind a top-right exclamation entry with current-reminder actions, snooze options, persistent local reminder history, and a clear-history control
 - The template panel now supports multiple reusable templates, including a custom table template and an account membership management template
 - Account membership templates can now generate multiple account sections at once, and timers now support a quota field plus edit-in-place updates from the note detail panel
 - The collapsed launcher is reduced to a 59x59 visible/clickable logo area, and note cards can be dragged to reorder within their pinned or unpinned section
@@ -60,11 +61,11 @@ This document tracks the real implementation state of the repository and the hig
 ## Current Implementation Focus
 
 - The current codebase implements a local-first floating desktop note app under the Renyiqian product direction
-- The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminders, drag ordering, startup preference, and packaged GitHub Releases update checks
-- The next major step is live UI smoke verification, dependency security upgrades, and local data durability improvements
+- The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminder history and snooze, drag ordering, startup preference, and packaged GitHub Releases update checks
+- The next major step is live UI smoke verification and local data durability improvements
 - Current runtime sync behavior is local-only; historical synced-folder implementation code is no longer present
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current local package metadata is being advanced for the next release; release artifacts should be regenerated after version `1.5.0` is committed.
+- The current local package metadata reports version `1.6.0`.
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet

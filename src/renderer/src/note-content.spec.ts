@@ -12,7 +12,8 @@ import {
   markDueTimersFired,
   normalizeTimerQuota,
   refreshQuickTimer,
-  resolveTimerDueAt
+  resolveTimerDueAt,
+  snoozeFiredTimers
 } from './note-content'
 
 describe('note content helpers', () => {
@@ -258,6 +259,36 @@ describe('note content helpers', () => {
         dueAt: now + 30 * 24 * 60 * 60 * 1000
       },
       { id: 'single', status: 'done' }
+    ])
+  })
+
+  it('snoozes fired timers by scheduling them for a later time', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+    const tenMinutes = 10 * 60 * 1000
+
+    expect(
+      snoozeFiredTimers(
+        [
+          {
+            id: 'due',
+            name: 'due timer',
+            dueAt: new Date('2026-06-10T07:59:00.000Z').getTime(),
+            status: 'fired'
+          },
+          {
+            id: 'other',
+            name: 'other timer',
+            dueAt: new Date('2026-06-10T09:00:00.000Z').getTime(),
+            status: 'scheduled'
+          }
+        ],
+        ['due'],
+        tenMinutes,
+        now
+      )
+    ).toMatchObject([
+      { id: 'due', status: 'scheduled', dueAt: now + tenMinutes },
+      { id: 'other', status: 'scheduled', dueAt: new Date('2026-06-10T09:00:00.000Z').getTime() }
     ])
   })
 })

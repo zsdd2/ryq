@@ -19,7 +19,7 @@ The current runnable app includes:
 - Rich note editing and card previews
 - Table templates and account-membership templates
 - Global search across all local groups
-- Per-note timers, quick countdown presets, reminder acknowledgement, and timer quota editing
+- Per-note timers, quick countdown presets, reminder acknowledgement, snooze, reminder history, and timer quota editing
 - Drag ordering within pinned and unpinned note sections
 - Optional Windows launch-on-login preference, disabled by default
 - Stable packaged Windows data path at `%APPDATA%/renyiqian/data/renyiqian.db`

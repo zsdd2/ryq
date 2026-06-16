@@ -319,6 +319,26 @@ export function acknowledgeFiredTimers(timers: NoteTimer[], timerIds: string[], 
   })
 }
 
+export function snoozeFiredTimers(
+  timers: NoteTimer[],
+  timerIds: string[],
+  delayMs: number,
+  now = Date.now()
+): NoteTimer[] {
+  const snoozedTimerIds = new Set(timerIds)
+  const nextDueAt = now + delayMs
+
+  return timers.map((timer) =>
+    snoozedTimerIds.has(timer.id)
+      ? {
+          ...timer,
+          dueAt: nextDueAt,
+          status: 'scheduled'
+        }
+      : timer
+  )
+}
+
 export function formatTimerRemaining(dueAt: number, now = Date.now()): string {
   const delta = dueAt - now
   const absoluteDelta = Math.abs(delta)
