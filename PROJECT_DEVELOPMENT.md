@@ -552,4 +552,62 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 - The global Node runtime is v24.13.0 and is not suitable for this baseline because `better-sqlite3@9.6.0` falls back to native compilation.
 - The machine does not currently expose a usable MSVC C++ toolset for `node-gyp` fallback builds.
 - `npm install` completed only after `LOCALAPPDATA` was redirected to the project directory so Electron could cache its binary locally.
-- `npm audit` reports 18 dependency vulnerabilities in the upstream baseline: 1 low, 5 moderate, 11 high, and 1 critical. Do not run forced audit fixes until after the Stickban base behavior is captured, because dependency upgrades may change Electron/native-module behavior.
+- Current audit state:
+  - `npm audit --omit=dev` reports 2 moderate production vulnerabilities through `electron-updater -> js-yaml`.
+  - Full `npm audit` reports 58 total vulnerabilities: 8 low, 30 moderate, 19 high, and 1 critical. The critical item is in the dev/test chain through Vitest/Vite.
+  - Do not run forced audit fixes inline with feature work; Electron, Vite, Vitest, builder, and native dependency upgrades need a dedicated verification batch.
+
+## Current Modification Goal - Full CodeGraph And Code Audit
+
+- Audit the current Renyiqian codebase end to end through CodeGraph, targeted `rg` searches, static review, tests, build, and dependency audit.
+- Identify business-flow bugs and architecture/documentation mismatches before changing implementation.
+- Reorder the future development plan around bug repair and verification rather than more feature expansion.
+
+## Current Status
+
+- CodeGraph architecture query was run for `F:\xinxiangmu\ZMBJ`; the index surfaced only a shallow subset of entry points, so the audit was expanded with `rg --files`, targeted `rg` searches, and direct reads of the main, preload, renderer, shared types, tests, docs, release, and sync/update files.
+- `kf01.md` was missing from the project root even though the agent rules require it before coding. The file was restored from `C:\Users\Administrator\.codex\templates\kf01.md`.
+- Verification passed:
+  - `npm run typecheck`
+  - `npm test` passed: 10 test files, 47 tests.
+  - `npm run build`
+- Verification caveat:
+  - `npm test` still prints `close timed out after 10000ms` after the passing run, so the test process has a resource cleanup issue that should be investigated.
+
+## Audit Findings
+
+| Priority | Area | Finding | Evidence | Next Action |
+| --- | --- | --- | --- | --- |
+| P1 | Reminder business flow | Due reminders are checked only inside the currently active group, so timers in inactive groups can be missed until the user switches groups. | `src/renderer/src/App.tsx` builds `activeNotes` from `workspace.activeBoard.columns` before firing reminders. | Add an all-groups reminder query or main-process reminder scheduler; cover inactive-group due timers with tests. |
+| P1 | Rich text safety | Stored note HTML is rendered directly into the card preview and editor without sanitization. | `src/renderer/src/note-content.ts` returns parsed `html`; `src/renderer/src/App.tsx` renders it with `dangerouslySetInnerHTML`. | Introduce a strict note-HTML sanitizer and tests for scripts, event handlers, unsafe URLs, tables, and allowed formatting. |
+| P1 | Product/docs consistency | Runtime sync endpoints are local-only disabled compatibility handlers, while README/SPEC/IMPLEMENTATION/site still describe Stickban synced-folder cloud sync as current product reality. | `src/main/index.ts` maps sync IPC to `createLocalOnlySyncStatus`; docs and site still describe active cloud sync. | Update public docs/site/spec/decision records to match Renyiqian local-only runtime, or explicitly reopen sync as a separate approved scope. |
+| P2 | Dead architecture paths | `src/renderer/src/store.ts` still holds the old Zustand board/sync/update store but is not imported by the active renderer. `src/main/sync.ts` is still tested but no longer constructed in the runtime. | `rg` finds `useBoardStore` only inside `store.ts`; main process imports local-only sync services instead of `SyncManager`. | Replace legacy safety tests with current local-note tests, then remove or clearly isolate dormant paths. |
+| P2 | Test/runtime verification | Layout regression coverage currently reads source strings, not a live Electron UI. | `src/renderer/src/app-layout.spec.ts` asserts source/CSS substrings. | Add a repeatable live UI smoke check for launcher, panel, note editing, reminders, and update controls. |
+| P2 | Dependency security | Production audit has moderate updater-chain issues; full dev/build audit has 58 advisories, including a Vitest/Vite critical dev-chain issue. | Fresh `npm audit --omit=dev` and `npm audit` runs. | Schedule a dedicated dependency upgrade and package verification batch. |
+| P3 | Naming/API cleanup | Public API and globals still use `StickbanApi` and `window.stickban` while product UI/package name is Renyiqian. | `src/shared/types.ts` and `src/preload/index.ts`. | Rename only after higher-priority behavior fixes, with compatibility consideration for preload consumers. |
+
+## Future Modification Plan
+
+1. Fix inactive-group reminder delivery.
+   - Add tests proving a due timer outside the active group is detected.
+   - Decide whether detection belongs in main-process SQLite queries or a renderer all-workspace snapshot.
+   - Verify with `npm run typecheck`, targeted tests, and full `npm test`.
+2. Add note HTML sanitization at the parsing/render boundary.
+   - Preserve current rich text and template table output.
+   - Strip script tags, event attributes, unsafe URLs, and unknown attributes.
+   - Add regression tests before production changes.
+3. Clean product reality documentation.
+   - Update README, README.pt-BR, SPEC, IMPLEMENTATION, DECISIONS, and `site/` so they describe Renyiqian local floating notes and current updater behavior accurately.
+   - Remove claims that synced-folder cloud sync is the active runtime unless sync is intentionally restored in a separate approved task.
+4. Retire unused legacy renderer store and dormant runtime sync only after replacement tests exist.
+   - Keep data migration safety and local SQLite behavior protected.
+   - Avoid deleting `src/main/sync.ts` until docs and tests no longer depend on old sync claims.
+5. Fix the Vitest shutdown warning.
+   - Use hanging-process diagnostics or test isolation to find the open handle.
+   - Keep this separate from product behavior changes.
+6. Add live Electron UI smoke verification for release-facing work.
+   - Verify launcher open/collapse, note create/edit/delete, reminder confirmation, search, and update buttons in a real app process.
+7. Run a dedicated dependency upgrade batch.
+   - Upgrade Electron/build/test tooling conservatively.
+   - Rebuild native dependencies with the project-local Node 20 runtime.
+   - Verify tests, build, Windows packaging, `latest.yml`, and updater config.

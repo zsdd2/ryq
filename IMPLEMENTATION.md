@@ -6,14 +6,14 @@ This document tracks the real implementation state of the repository and the hig
 
 ## Current Repository State
 
-- The repository is still in bootstrap stage.
-- A runnable Electron application scaffold now exists.
+- The repository has moved beyond the original Stickban bootstrap into a Renyiqian local floating-note fork.
+- A runnable Electron application exists with a compact launcher/panel flow.
 - The repository currently contains product and process documentation, license metadata, and logo assets.
 - Public project documentation exists in [`README.md`](./README.md) and [`README.pt-BR.md`](./README.pt-BR.md).
 - Product specification exists in [`SPEC.md`](./SPEC.md).
 - Architecture and workflow guidance exists in [`DECISIONS.md`](./DECISIONS.md) and [`AGENTS.md`](./AGENTS.md).
 - A root-level convenience script now exists for fast-forwarding the local `main` branch from the remote repository when the working tree is clean.
-- The current implementation milestone is local-first and now includes synced-folder cloud sync without Google APIs, OAuth, or managed external infrastructure.
+- The current Renyiqian runtime is local-first and keeps synced-folder behavior disabled behind local-only compatibility IPC handlers.
 
 ## Implemented Milestones
 
@@ -39,12 +39,7 @@ This document tracks the real implementation state of the repository and the hig
 - Columns now support inline rename on click, drag-and-drop reordering inside the active board, and moving an entire column to another board through board-tab drop targets
 - Card dragging now uses pointer-driven interaction instead of native HTML drag, with a custom ghost preview and more tolerant reordering inside and across columns in the active board
 - The renderer footer now shows the runtime app version reported by Electron so packaged builds can display the same version number used by automated releases
-- Synced-folder cloud sync now exists through immutable operation files, periodic checkpoints, local outbox handling, and a settings/status panel in the renderer
-- First-time synced-folder bootstrap now exports an initial checkpoint into an empty remote folder and blocks silent linking when a populated remote folder conflicts with unsynchronized local data
-- Sync bootstrap now refuses to export local seed state into a populated remote folder before a valid remote import succeeds, and invalid checkpoints/orphan remote operations are rejected instead of contaminating the workspace
-- Out-of-order remote operations with missing dependencies are now retried in later sync passes instead of being marked as permanently consumed
-- Adopting a remote workspace now creates a local recovery backup first, and app shutdown now flushes the local sync outbox into the configured synced folder before quitting
-- An automated regression suite now covers sync bootstrap, deferred remote operations, destructive remote adoption safeguards, shutdown outbox flush behavior, and immediate workspace refresh after sync-folder selection
+- Synced-folder cloud sync code and regression tests remain in the repository as legacy/dormant code, but the active Renyiqian main process currently exposes local-only sync compatibility responses
 - GitHub release/version automation configured for `main`
 - Windows release packaging simplified to NSIS installer only
 - Packaged Windows builds now use in-app update checks backed by GitHub Releases and `electron-updater`, including background download and restart-to-install flow
@@ -64,12 +59,12 @@ This document tracks the real implementation state of the repository and the hig
 
 ## Current Implementation Focus
 
-- The current codebase implements the first local-first cloud-sync milestone
-- The current milestone includes multiple boards, custom columns, and synced-folder replication inside the local-first workspace
-- The next major step is deeper manual validation across multiple devices and a richer recovery UX on top of the hardened sync core
-- The repository now includes a dedicated `npm test` workflow for sync-risk regression coverage
+- The current codebase implements a local-first floating desktop note app under the Renyiqian product direction
+- The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminders, drag ordering, startup preference, and packaged GitHub Releases update checks
+- The next major step is audit-driven bug repair: inactive-group reminder delivery, note HTML sanitization, product documentation consistency, dead legacy path cleanup, test-runner shutdown cleanup, and live UI smoke verification
+- The repository still includes sync-risk regression coverage for legacy code, but current runtime sync behavior is local-only
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current 任意签 Windows artifact is generated as `dist/renyiqian-setup-1.4.0.exe`; `latest.yml` points to the same filename for updater compatibility
+- The current local package metadata is `1.4.6`; the latest locally recorded release artifact is `dist/renyiqian-setup-1.4.6.exe`
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet
@@ -82,4 +77,4 @@ This document tracks the real implementation state of the repository and the hig
 - This file records actual repository state and completed milestones.
 - Future goals and planning belong in [`ROADMAP.md`](./ROADMAP.md).
 - Architectural decisions belong in [`DECISIONS.md`](./DECISIONS.md).
-- Remote sync is now part of the runnable milestone through a synced-folder operation log and periodic checkpoints.
+- Remote sync is not part of the current active Renyiqian runtime unless a future product decision explicitly restores it.
