@@ -737,3 +737,18 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
   - `codegraph sync` reported the index is up to date.
 - Verification caveat:
   - The Vitest shutdown warning is confirmed to be an Electron/Vitest/native-module runner compatibility issue and remains scheduled for the dependency upgrade batch.
+
+## Current Modification Goal - Version 1.4.7 Metadata Bump
+
+- Update package metadata from `1.4.6` to `1.4.7` after the audit repair batch was committed and pushed.
+- Keep the version-only change separate from the functional repair commit.
+
+## Current Status
+
+- Verified.
+- `npm run release:version` calculated the next patch release as `1.4.7` / `v1.4.7` from the latest `v1.4.6` tag and the new `fix:` audit repair commit.
+- `package.json` and `package-lock.json` now report version `1.4.7`.
+- Verification passed:
+  - `npm run release:version`
+  - `npm run build`
+  - `codegraph sync` reported the index is up to date.
