@@ -28,6 +28,8 @@ describe('compact application layout', () => {
 
   it('moves active reminders onto alert note cards instead of the old bottom bubble', () => {
     expect(styles).toContain('.note-reminder-chip')
+    expect(styles).toContain('position: absolute')
     expect(styles).not.toContain('.reminder-bubble')
+    expect(styles).not.toContain('padding-top: 28px')
   })
 })

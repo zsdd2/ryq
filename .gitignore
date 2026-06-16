@@ -32,6 +32,7 @@ yarn-error.log*
 .node-gyp/
 .npm-cache/
 .npm-cache-node20/
+.smoke/
 .tools/
 *.tsbuildinfo
 

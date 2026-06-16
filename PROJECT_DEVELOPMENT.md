@@ -850,3 +850,33 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 1. Add live Electron UI smoke coverage for reminder history open/clear, card reminder confirmation, and snooze actions.
 2. Continue with local backup/export/import as the next high-impact feature.
 3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Electron Reminder Smoke And Floating Chip
+
+- Verify reminder history and snooze behavior in a real Electron runtime.
+- Fix the fired-reminder card chip so the `提醒` label floats over the card instead of consuming note text layout space.
+- Advance patch metadata to `1.6.1` for the next release push.
+
+## Current Status
+
+- Implemented and verified.
+- Added `npm run smoke:electron`, which builds the app, launches real Electron with isolated app/user data paths, connects through the DevTools protocol, opens the launcher, seeds a due reminder note, verifies the alert card and top-right reminder panel, verifies snooze history persistence, and verifies clear-history behavior.
+- Added main-process path override coverage for `RENYIQIAN_APP_DATA_PATH` and `RENYIQIAN_USER_DATA_PATH` so smoke tests do not touch the user's real app data.
+- Updated the fired reminder chip CSS so `.note-reminder-chip` remains absolutely positioned and `.note-card.timer-alert` no longer adds extra top padding.
+- Added a layout regression assertion that the old bottom `.reminder-bubble` stays removed and the timer alert card does not reintroduce reminder-chip layout padding.
+- Advanced `package.json` and `package-lock.json` to `1.6.1`.
+- Verification passed:
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `npm test -- src/main/app-paths.spec.ts src/renderer/src/app-layout.spec.ts`
+  - `npm test` passed: 10 test files, 45 tests.
+  - `npm run smoke:electron`
+  - `npm run site:build`
+  - `npm audit --omit=dev` reports 0 vulnerabilities.
+  - `git diff --check`
+  - `C:\Users\Administrator\AppData\Local\codegraph\current\bin\codegraph.cmd sync` completed and synced changed files.
+
+## Future Modification Plan
+
+1. Commit and push version `1.6.1`.
+2. Continue with local backup/export/import as the next high-impact feature.
+3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.

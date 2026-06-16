@@ -64,6 +64,7 @@ Commands:
 ```bash
 npm install
 npm test
+npm run smoke:electron
 npm run dev
 npm run build
 npm run dist:win

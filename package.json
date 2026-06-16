@@ -1,7 +1,7 @@
 {
   "name": "renyiqian",
   "productName": "任意签",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "A floating desktop note app.",
   "main": "out/main/index.js",
   "author": "Ivan Yort <ivan.yort@gmail.com>",
@@ -12,6 +12,7 @@
     "start": "electron-vite preview",
     "start:root": "electron --no-sandbox out/main/index.js",
     "test": "node ./scripts/tests/run-electron-vitest.mjs run",
+    "smoke:electron": "npm run build && node ./scripts/tests/smoke-electron-reminders.mjs",
     "site:dev": "vite --config site/vite.config.ts",
     "site:build": "vite build --config site/vite.config.ts",
     "typecheck": "tsc --noEmit",

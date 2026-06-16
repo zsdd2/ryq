@@ -54,6 +54,7 @@ This document tracks the real implementation state of the repository and the hig
 - Collapsing the note panel back to launcher mode now explicitly restores, shows, raises, and centers the 88x88 logo launcher instead of letting the window stay hidden or shrink from an unsafe position
 - Note cards now clamp rich previews to two lines, show compact per-note countdown rows on the right side, support direct card-level pin toggling, and keep fired reminders visible on the alert card until the user confirms them
 - Timer reminders now collect behind a top-right exclamation entry with current-reminder actions, snooze options, persistent local reminder history, and a clear-history control
+- The fired-reminder card chip now floats over the note card without changing the note text or timer row layout, and `npm run smoke:electron` verifies the reminder panel, snooze history, and clear-history flow in a real Electron runtime with isolated local data paths
 - The template panel now supports multiple reusable templates, including a custom table template and an account membership management template
 - Account membership templates can now generate multiple account sections at once, and timers now support a quota field plus edit-in-place updates from the note detail panel
 - The collapsed launcher is reduced to a 59x59 visible/clickable logo area, and note cards can be dragged to reorder within their pinned or unpinned section
@@ -62,10 +63,10 @@ This document tracks the real implementation state of the repository and the hig
 
 - The current codebase implements a local-first floating desktop note app under the Renyiqian product direction
 - The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminder history and snooze, drag ordering, startup preference, and packaged GitHub Releases update checks
-- The next major step is live UI smoke verification and local data durability improvements
+- The next major step is broader live UI smoke coverage and local data durability improvements
 - Current runtime sync behavior is local-only; historical synced-folder implementation code is no longer present
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current local package metadata reports version `1.6.0`.
+- The current local package metadata reports version `1.6.1`.
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet

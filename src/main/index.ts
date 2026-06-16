@@ -51,10 +51,18 @@ const WINDOWS_RUN_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows\\CurrentVers
 const WINDOWS_STARTUP_APPROVED_KEY_USER = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run'
 const WINDOWS_STARTUP_APPROVED_KEY_MACHINE =
   'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run'
+const appDataPathOverride = process.env.RENYIQIAN_APP_DATA_PATH
+const userDataPathOverride = process.env.RENYIQIAN_USER_DATA_PATH
 
 app.setName(CANONICAL_USER_DATA_DIR_NAME)
 
-if (process.platform === 'win32') {
+if (appDataPathOverride) {
+  app.setPath('appData', appDataPathOverride)
+}
+
+if (userDataPathOverride) {
+  app.setPath('userData', userDataPathOverride)
+} else if (process.platform === 'win32') {
   app.setPath('userData', getCanonicalUserDataPath(app.getPath('appData')))
 }
 
