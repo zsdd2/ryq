@@ -21,6 +21,7 @@ O app executavel atual inclui:
 - Busca global em todos os grupos locais
 - Temporizadores por nota, atalhos de contagem regressiva, confirmacao de lembrete e edicao de cota
 - Ordenacao por arraste dentro de secoes fixadas e nao fixadas
+- Comportamento desktop focado na bandeja: a janela flutuante nao aparece na barra de tarefas, fecha para a bandeja e pode ser exibida, ocultada, atualizada ou encerrada pelo menu da bandeja
 - Preferencia opcional de iniciar com o Windows, desativada por padrao
 - Caminho estavel de dados no Windows empacotado: `%APPDATA%/renyiqian/data/renyiqian.db`
 - Verificacao de atualizacoes no Windows via GitHub Releases e `electron-updater`
@@ -98,9 +99,9 @@ A implementacao atual vive principalmente em:
 
 Veja [`ROADMAP.md`](./ROADMAP.md) para o plano detalhado.
 
-- Atual: notas flutuantes locais, persistencia SQLite agrupada, edicao rica, modelos, busca, temporizadores, lembretes, preferencia de startup no Windows e atualizacoes empacotadas no Windows
-- Proximo: reparos guiados por auditoria, incluindo lembretes fora do grupo ativo, sanitizacao de HTML rico, consistencia de docs/runtime, limpeza de codigo legado, investigacao do warning de shutdown dos testes e smoke test real da UI
-- Futuro: tray, temas, export/import, recuperacao local de backup e somente escopos de sync/app companheiro explicitamente aprovados
+- Atual: notas flutuantes locais, persistencia SQLite agrupada, edicao rica, modelos, busca, temporizadores, lembretes, comportamento desktop focado na bandeja, preferencia de startup no Windows e atualizacoes empacotadas no Windows
+- Proximo: ordenacao automatica por contagem regressiva, preservando ordenacao manual como opcao
+- Futuro: temas, export/import e somente escopos de sync/app companheiro explicitamente aprovados
 
 ## Releases
 

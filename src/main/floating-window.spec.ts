@@ -17,6 +17,7 @@ describe('createFloatingWindowOptions', () => {
     expect(options.alwaysOnTop).toBe(true)
     expect(options.maximizable).toBe(false)
     expect(options.resizable).toBe(false)
+    expect(options.skipTaskbar).toBe(true)
     expect(options.title).toBe('任意签')
     expect(options.webPreferences?.preload).toBe('preload.js')
     expect(options.webPreferences?.contextIsolation).toBe(true)
@@ -36,6 +37,7 @@ describe('createFloatingWindowOptions', () => {
     expect(options.maxWidth).toBe(960)
     expect(options.maxHeight).toBe(760)
     expect(options.maximizable).toBe(false)
+    expect(options.skipTaskbar).toBe(true)
   })
 
   it('computes a moved launcher position from pointer deltas', () => {

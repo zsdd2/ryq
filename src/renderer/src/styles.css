@@ -240,13 +240,14 @@ button:disabled {
 }
 
 .icon-button {
-  width: 26px;
-  height: 26px;
+  min-width: 34px;
+  min-height: 34px;
   display: grid;
   place-items: center;
   border-radius: 7px;
   background: transparent;
   color: var(--muted-foreground);
+  padding: 0;
 }
 
 .icon-button:hover {

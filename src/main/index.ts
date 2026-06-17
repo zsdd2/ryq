@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron'
 import { execFileSync } from 'node:child_process'
 import { basename, join } from 'node:path'
 import {
@@ -41,10 +41,12 @@ import {
 import { CANONICAL_USER_DATA_DIR_NAME, getCanonicalUserDataPath, migrateLegacyUserData } from './user-data'
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let updateManager: UpdateManager | null = null
 let updateCheckInterval: NodeJS.Timeout | null = null
 let backgroundServicesInitialized = false
 let floatingWindowMode: FloatingWindowMode = 'launcher'
+let isQuitting = false
 const WINDOWS_APP_USER_MODEL_ID = 'com.renyiqian.desktop'
 const WINDOWS_RUN_KEY_USER = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const WINDOWS_RUN_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
@@ -226,6 +228,54 @@ function presentMainWindow(): void {
   mainWindow.focus()
 }
 
+function getTrayIconPath(): string {
+  return join(__dirname, '../../logos/renyiqian-logo.ico')
+}
+
+function toggleMainWindowVisibility(): void {
+  if (!mainWindow || !mainWindow.isVisible()) {
+    presentMainWindow()
+    return
+  }
+
+  mainWindow.hide()
+}
+
+function quitFromTray(): void {
+  isQuitting = true
+  app.quit()
+}
+
+function createTray(): void {
+  if (tray) {
+    return
+  }
+
+  tray = new Tray(getTrayIconPath())
+  tray.setToolTip('任意签')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: '显示/隐藏',
+        click: toggleMainWindowVisibility
+      },
+      {
+        label: '检查更新',
+        click: () => {
+          presentMainWindow()
+          void updateManager?.checkForUpdates()
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '退出',
+        click: quitFromTray
+      }
+    ])
+  )
+  tray.on('click', toggleMainWindowVisibility)
+}
+
 function createMainWindow(): BrowserWindow {
   const floatingState = getFloatingWindowState()
   floatingWindowMode = floatingState.mode
@@ -266,6 +316,15 @@ function createMainWindow(): BrowserWindow {
       x,
       y
     })
+  })
+
+  window.on('close', (event) => {
+    if (isQuitting) {
+      return
+    }
+
+    event.preventDefault()
+    window.hide()
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -449,6 +508,7 @@ if (hasSingleInstanceLock) {
     cleanupDuplicateLaunchOnStartupEntries()
     applyLaunchOnStartupPreference(getLaunchOnStartupPreference())
     registerIpc()
+    createTray()
     presentMainWindow()
 
     app.on('activate', () => {
@@ -462,6 +522,7 @@ if (hasSingleInstanceLock) {
 }
 
 app.on('before-quit', () => {
+  isQuitting = true
   backgroundServicesInitialized = false
   if (updateCheckInterval !== null) {
     clearInterval(updateCheckInterval)
@@ -470,7 +531,7 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (isQuitting && process.platform !== 'darwin') {
     app.quit()
   }
 })

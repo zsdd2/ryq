@@ -52,6 +52,7 @@ This document tracks the real implementation state of the repository and the hig
 - The 任意签 fork currently builds a compact floating-note experience with a logo-only collapsed launcher, grouped local notes, rich note editing, global search, table-template notes, a Windows startup toggle, and packaged GitHub Releases update checks through `electron-updater`
 - The Windows packaged app now pins its canonical local data directory to `%APPDATA%/renyiqian` and migrates legacy `%APPDATA%/任意签` or `%APPDATA%/Stickban` databases only when the canonical database has no user notes
 - Collapsing the note panel back to launcher mode now explicitly restores, shows, raises, and centers the 88x88 logo launcher instead of letting the window stay hidden or shrink from an unsafe position
+- The desktop window now uses tray-first behavior: BrowserWindow instances skip the OS taskbar, the titlebar close action hides to tray, the tray icon can show/hide the window, check updates, or quit, and packaged builds include the tray icon resource
 - Note cards now clamp rich previews to two lines, show compact per-note countdown rows on the right side, support direct card-level pin toggling, and keep fired reminders visible on the alert card until the user confirms them
 - Timer reminders now collect behind a top-right exclamation entry with current-reminder actions, snooze options, persistent local reminder history, and a clear-history control
 - The fired-reminder card chip now floats over the note card without changing the note text or timer row layout, and `npm run smoke:electron` verifies the reminder panel, snooze history, and clear-history flow in a real Electron runtime with isolated local data paths
@@ -62,11 +63,11 @@ This document tracks the real implementation state of the repository and the hig
 ## Current Implementation Focus
 
 - The current codebase implements a local-first floating desktop note app under the Renyiqian product direction
-- The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminder history and snooze, drag ordering, startup preference, and packaged GitHub Releases update checks
+- The current milestone includes grouped local notes, rich note editing, templates, search, timers, reminder history and snooze, tray-first desktop behavior, drag ordering, startup preference, and packaged GitHub Releases update checks
 - The next major step is broader live UI smoke coverage and local data durability improvements
 - Current runtime sync behavior is local-only; historical synced-folder implementation code is no longer present
 - Automatic updates are currently intended only for packaged Windows builds; development builds and non-Windows packages stay outside this flow
-- The current local package metadata reports version `1.6.1`.
+- The current local package metadata reports version `1.7.0`.
 - The current scaffold should be usable without subscriptions, paid services, provider APIs, or managed cloud dependencies
 
 ## Not Implemented Yet

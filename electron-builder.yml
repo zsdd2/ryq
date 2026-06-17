@@ -6,6 +6,7 @@ directories:
 files:
   - out/**
   - package.json
+  - logos/renyiqian-logo.ico
 linux:
   target:
     - AppImage

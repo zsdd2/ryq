@@ -69,7 +69,7 @@ export function createFloatingWindowOptions({
     resizable: mode === 'panel',
     maximizable: false,
     fullscreenable: false,
-    skipTaskbar: false,
+    skipTaskbar: true,
     autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath,

@@ -878,5 +878,38 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 ## Future Modification Plan
 
 1. Commit and push version `1.6.1`.
-2. Continue with local backup/export/import as the next high-impact feature.
+2. Continue with tray-first desktop behavior and larger titlebar button hit targets as the next high-impact feature.
+3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Tray First Desktop Behavior
+
+- Hide the floating 任意签 window from the OS taskbar and keep access through the system tray.
+- Make the titlebar icon buttons easier to click without making the icons visually larger.
+- Keep close behavior non-destructive: the titlebar close button should hide to tray, while the tray menu keeps an explicit quit action.
+- Advance feature metadata to `1.7.0` for the next release push.
+
+## Current Status
+
+- Implemented and verified locally.
+- Added source-level regression tests for taskbar skipping, tray menu creation, close-to-tray behavior, and larger titlebar icon-button hit targets.
+- Updated `createFloatingWindowOptions` so launcher and panel windows use `skipTaskbar: true`.
+- Added a persistent Electron Tray with `显示/隐藏`, `检查更新`, and `退出` actions.
+- Changed close handling so titlebar close hides the window unless the app is explicitly quitting.
+- Enlarged `.icon-button` click targets to at least `34px` square while keeping the existing icon artwork sizes.
+- Included `logos/renyiqian-logo.ico` in packaged files so the tray icon is available in packaged builds.
+- Advanced `package.json` and `package-lock.json` to `1.7.0`.
+- Verification passed:
+  - `npm test -- src/main/floating-window.spec.ts src/main/tray.spec.ts src/renderer/src/app-layout.spec.ts`
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `npm test` passed: 11 test files, 48 tests.
+  - `npm run smoke:electron`
+  - `npm run site:build`
+  - `npm audit --omit=dev` reports 0 vulnerabilities.
+  - `git diff --check`
+  - `C:\Users\Administrator\AppData\Local\codegraph\current\bin\codegraph.cmd sync` completed; final run reported `Already up to date`.
+
+## Future Modification Plan
+
+1. Commit and push version `1.7.0`.
+2. Implement countdown-aware automatic sorting as the next feature, with manual sorting preserved as an option.
 3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.

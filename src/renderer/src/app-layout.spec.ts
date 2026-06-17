@@ -32,4 +32,11 @@ describe('compact application layout', () => {
     expect(styles).not.toContain('.reminder-bubble')
     expect(styles).not.toContain('padding-top: 28px')
   })
+
+  it('keeps titlebar icon controls easy to click without enlarging the icon artwork', () => {
+    expect(styles).toContain('.icon-button')
+    expect(styles).toContain('min-width: 34px')
+    expect(styles).toContain('min-height: 34px')
+    expect(styles).toContain('padding: 0')
+  })
 })

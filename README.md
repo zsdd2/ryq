@@ -21,6 +21,7 @@ The current runnable app includes:
 - Global search across all local groups
 - Per-note timers, quick countdown presets, reminder acknowledgement, snooze, reminder history, and timer quota editing
 - Drag ordering within pinned and unpinned note sections
+- Tray-first desktop behavior: the floating window stays out of the taskbar, closes to the tray, and can be shown, hidden, updated, or quit from the tray menu
 - Optional Windows launch-on-login preference, disabled by default
 - Stable packaged Windows data path at `%APPDATA%/renyiqian/data/renyiqian.db`
 - Packaged Windows update checks through GitHub Releases and `electron-updater`
@@ -117,9 +118,9 @@ The current app implementation lives mainly in:
 
 For the detailed roadmap, see [`ROADMAP.md`](./ROADMAP.md).
 
-- Current: local floating notes, grouped SQLite persistence, rich editing, templates, search, timers, reminders, Windows startup preference, and packaged Windows update checks
-- Next: audit-driven repair work, including live UI smoke checks, dependency upgrades, and local data durability improvements
-- Future: tray integration, themes, export/import, local backup recovery UX, and only explicitly approved sync or companion-app scope
+- Current: local floating notes, grouped SQLite persistence, rich editing, templates, search, timers, reminders, tray-first desktop behavior, Windows startup preference, and packaged Windows update checks
+- Next: countdown-aware automatic sorting while preserving manual ordering as an option
+- Future: themes, export/import, and only explicitly approved sync or companion-app scope
 
 ## Repository Documents
 
