@@ -250,7 +250,14 @@ function App(): JSX.Element {
   }
 
   function getVisibleTimerRows(timers: NoteTimer[]): Array<{ id: string; name: string; quota: string; due: string; title: string }> {
-    return timers.filter((timer) => timer.status !== 'done').map((timer) => {
+    return timers.filter((timer) => timer.status !== 'done').sort((left, right) => {
+      const leftPriority = left.isCore ? 0 : left.isSort ? 1 : 2
+      const rightPriority = right.isCore ? 0 : right.isSort ? 1 : 2
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority
+      }
+      return resolveTimerDueAt(left, timerNow) - resolveTimerDueAt(right, timerNow)
+    }).map((timer) => {
       const dueAt = resolveTimerDueAt(timer, timerNow)
       return {
         id: timer.id,
@@ -649,10 +656,7 @@ function App(): JSX.Element {
     const nextTimers = editingTimerId
       ? note.timers.map((timer) => (timer.id === editingTimerId ? nextTimer : timer))
       : [...note.timers, nextTimer]
-    const inlineTimerHtml = editingTimerId
-      ? ''
-      : `<p><span class="note-inline-timer" data-timer-id="${escapeHtml(nextTimer.id)}">⏱ ${escapeHtml(getCompactTimerName(nextTimer.name))}</span></p>`
-    await saveNote(note, `${getCurrentEditorHtml()}${inlineTimerHtml}`, note.pinned, nextTimers)
+    await saveNote(note, getCurrentEditorHtml(), note.pinned, nextTimers)
   }
 
   function startEditingTimer(timer: NoteTimer): void {
@@ -1791,14 +1795,14 @@ function App(): JSX.Element {
                             className={timer.isCore ? 'timer-role-button active' : 'timer-role-button'}
                             onClick={() => void setTimerCoreRole(selectedNote, timer.id)}
                           >
-                            设为核心
+                            {timer.isCore ? '✓ 核心' : '核心'}
                           </button>
                           <button
                             type="button"
                             className={timer.isSort ? 'timer-role-button active' : 'timer-role-button'}
                             onClick={() => void setTimerSortRole(selectedNote, timer.id)}
                           >
-                            设为排序
+                            {timer.isSort ? '✓ 排序' : '排序'}
                           </button>
                         </div>
                       </div>

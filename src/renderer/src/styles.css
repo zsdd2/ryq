@@ -878,7 +878,7 @@ button:disabled {
 .note-section-heading {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -1038,6 +1038,10 @@ button:disabled {
   gap: 5px;
 }
 
+.note-timer-stack:not(.empty) {
+  min-height: 51px;
+}
+
 .note-timer-stack.empty {
   min-height: 1px;
 }
@@ -1151,6 +1155,7 @@ button:disabled {
 .note-dialog {
   position: fixed;
   inset: 0;
+  z-index: 40;
   display: grid;
   place-items: center;
   background: rgb(33 57 108 / 18%);
@@ -1405,17 +1410,6 @@ button:disabled {
   border-bottom: 1px dashed var(--blue);
   color: transparent;
   vertical-align: baseline;
-}
-
-.note-inline-timer {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgb(236 243 255);
-  padding: 2px 8px;
-  color: var(--blue);
-  font-size: 12px;
-  font-weight: 750;
 }
 
 .note-dialog-actions {

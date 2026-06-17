@@ -44,7 +44,6 @@ const REMOVED_HTML_TAGS = [
 const ALLOWED_CLASS_NAMES = new Set([
   'account-template-row',
   'account-template-table',
-  'note-inline-timer',
   'note-template-table'
 ])
 
@@ -177,6 +176,7 @@ function sanitizeHtmlAttributes(tagName: string, attributes: string): string {
 export function sanitizeNoteHtml(html: string): string {
   const removedTagPattern = REMOVED_HTML_TAGS.join('|')
   const withoutDangerousBlocks = html
+    .replace(/<span\b[^>]*class\s*=\s*["'][^"']*\bnote-inline-timer\b[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(new RegExp(`<\\s*(${removedTagPattern})\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>`, 'gi'), '')
     .replace(new RegExp(`<\\s*\\/?\\s*(${removedTagPattern})\\b[^>]*>`, 'gi'), '')

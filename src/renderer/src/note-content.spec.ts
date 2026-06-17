@@ -78,7 +78,7 @@ describe('note content helpers', () => {
     expect(note.html).not.toContain('javascript:')
   })
 
-  it('preserves supported formatting, table markup, and timer markers while sanitizing attributes', () => {
+  it('preserves supported formatting and table markup while removing inline timer markers', () => {
     const description = buildNoteDescription({
       html: '<table class="note-template-table unknown"><tbody><tr class="account-template-row"><th scope="row" style="color:red">账号</th><td><strong>VIP</strong><span class="note-inline-timer other" data-timer-id="timer-1" onclick="alert(1)">计时</span></td></tr></tbody></table>',
       pinned: false
@@ -97,7 +97,8 @@ describe('note content helpers', () => {
     expect(note.html).toContain('<tr class="account-template-row">')
     expect(note.html).toContain('<th scope="row">账号</th>')
     expect(note.html).toContain('<strong>VIP</strong>')
-    expect(note.html).toContain('<span class="note-inline-timer" data-timer-id="timer-1">计时</span>')
+    expect(note.html).not.toContain('note-inline-timer')
+    expect(note.html).not.toContain('计时</span>')
     expect(note.html).not.toContain('style=')
     expect(note.html).not.toContain('onclick=')
     expect(note.html).not.toContain('unknown')

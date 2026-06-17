@@ -951,3 +951,36 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 1. Commit and push version `1.8.0`.
 2. Add live UI smoke coverage for selecting core/sort timers and waiting-area movement if the current smoke harness remains stable.
 3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Timer Sorting UI Polish
+
+- Shorten timer role controls from `设为核心` / `设为排序` to compact `核心` / `排序` buttons with a leading check mark when active.
+- Remove old inline timer markers from rich note content and stop inserting new markers when adding timers.
+- Keep at least two timer rows visible on note cards and prioritize core and sorting timers before ordinary timers.
+- Ensure the note edit dialog layers above sticky `工作区` / `等待区` headers.
+- Advance patch metadata to `1.8.1` for the next release push.
+
+## Current Status
+
+- Implemented and verified locally.
+- Updated the note sanitizer to remove historical `.note-inline-timer` spans while preserving supported table/rich formatting.
+- Removed inline timer marker insertion from `addTimer`, so rich text no longer gains unclickable timer labels.
+- Changed role buttons to compact `核心` / `排序` labels, with `✓ 核心` / `✓ 排序` when selected.
+- Sorted card timer rows by core first, sorting timer second, then remaining timers by due time.
+- Added a two-row minimum timer stack height and raised the note dialog above sticky section headings.
+- Advanced `package.json` and `package-lock.json` to `1.8.1`.
+- Verification passed so far:
+  - `npm test -- src/renderer/src/note-content.spec.ts src/renderer/src/app-layout.spec.ts`
+  - `npm test`
+  - `npm run smoke:electron`
+  - `npm run site:build`
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `npm audit --omit=dev` reports 0 vulnerabilities.
+  - `git diff --check`
+  - `codegraph sync` reports already up to date.
+
+## Future Modification Plan
+
+1. Commit and push version `1.8.1`.
+2. Add live UI smoke coverage for selecting core/sort timers and waiting-area movement if the current smoke harness remains stable.
+3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
