@@ -31,11 +31,14 @@ import {
   getCompactTimerName,
   getSummaryFromHtml,
   getTimerQuotaInputValue,
+  getTimerWorkspaceSections,
   markDueTimersFired,
   normalizeTimerQuota,
+  refreshDueCoreTimerQuotas,
   refreshQuickTimer,
   resolveTimerDueAt,
   snoozeFiredTimers,
+  type TimerSortDirection,
   type NoteTimerQuickPreset,
   type NoteTimerRepeat,
   type NoteTimer,
@@ -56,6 +59,7 @@ const TEMPLATE_STORAGE_KEY = 'renyiqian.noteTemplateText'
 const TEMPLATE_COLUMNS_STORAGE_KEY = 'renyiqian.noteTemplateColumnsText'
 const TEMPLATE_SELECTED_STORAGE_KEY = 'renyiqian.selectedTemplateId'
 const REMINDER_HISTORY_STORAGE_KEY = 'renyiqian.reminderHistory'
+const TIMER_SORT_DIRECTION_STORAGE_KEY = 'renyiqian.timerSortDirection'
 const REMINDER_HISTORY_LIMIT = 50
 const DEFAULT_TEMPLATE_TEXT = '客户\n电话\n事项\n备注'
 const DEFAULT_TEMPLATE_COLUMNS_TEXT = '内容'
@@ -96,6 +100,9 @@ interface ReminderHistoryEntry {
 }
 
 type ReminderNoteView = NoteView & Partial<Pick<NoteSearchResult, 'boardId' | 'boardTitle' | 'columnTitle'>>
+type NoteListRow =
+  | { kind: 'section'; id: string; title: string; count: number }
+  | { kind: 'note'; note: ReminderNoteView }
 
 function readStoredReminderHistory(): ReminderHistoryEntry[] {
   try {
@@ -141,6 +148,13 @@ function App(): JSX.Element {
   const [editingTimerId, setEditingTimerId] = useState<string | null>(null)
   const [editingCardQuota, setEditingCardQuota] = useState<{ noteId: string; timerId: string; value: string } | null>(null)
   const [timerNow, setTimerNow] = useState(() => Date.now())
+  const [timerSortDirection, setTimerSortDirection] = useState<TimerSortDirection>(() => {
+    try {
+      return window.localStorage.getItem(TIMER_SORT_DIRECTION_STORAGE_KEY) === 'desc' ? 'desc' : 'asc'
+    } catch {
+      return 'asc'
+    }
+  })
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -187,7 +201,30 @@ function App(): JSX.Element {
     }))
   }, [searchResults])
 
-  const visibleNotes = trimmedSearchQuery ? searchNotes : notes
+  const visibleNotes: ReminderNoteView[] = trimmedSearchQuery ? searchNotes : notes
+  const timerSections = useMemo(
+    () => getTimerWorkspaceSections(notes, timerNow, timerSortDirection),
+    [notes, timerNow, timerSortDirection]
+  )
+  const workspaceNotes: ReminderNoteView[] = trimmedSearchQuery ? visibleNotes : timerSections.workspaceNotes
+  const waitingNotes: ReminderNoteView[] = trimmedSearchQuery ? [] : timerSections.waitingNotes
+  const noteListRows = useMemo<NoteListRow[]>(() => {
+    if (trimmedSearchQuery) {
+      return visibleNotes.map((note) => ({ kind: 'note', note }))
+    }
+
+    return [
+      { kind: 'section', id: 'workspace', title: '工作区', count: workspaceNotes.length },
+      ...workspaceNotes.map((note) => ({ kind: 'note' as const, note })),
+      ...(waitingNotes.length > 0
+        ? [
+            { kind: 'section' as const, id: 'waiting', title: '等待区', count: waitingNotes.length },
+            ...waitingNotes.map((note) => ({ kind: 'note' as const, note }))
+          ]
+        : [])
+    ]
+  }, [trimmedSearchQuery, visibleNotes, workspaceNotes, waitingNotes])
+  const visibleNoteCount = workspaceNotes.length + waitingNotes.length
   const selectedTemplate =
     DEFAULT_NOTE_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? DEFAULT_NOTE_TEMPLATES[0]
   const updateProgress = updateStatus?.downloadProgressPercent ?? null
@@ -587,14 +624,20 @@ function App(): JSX.Element {
       return
     }
 
+    const normalizedQuota = normalizeTimerQuota(timerQuota)
+    const existingTimer = editingTimerId ? note.timers.find((timer) => timer.id === editingTimerId) : null
+
     const nextTimer: NoteTimer = {
       id: editingTimerId ?? crypto.randomUUID(),
       name: timerName.trim() || '计时器',
-      quota: normalizeTimerQuota(timerQuota),
+      quota: normalizedQuota,
+      quotaResetValue: normalizedQuota && normalizedQuota !== '0' ? normalizedQuota : existingTimer?.quotaResetValue,
       dueAt,
       status: 'scheduled',
       repeat: timerRepeat,
-      quickPreset: timerQuickPreset ?? undefined
+      quickPreset: timerQuickPreset ?? undefined,
+      isCore: existingTimer?.isCore,
+      isSort: existingTimer?.isSort
     }
 
     setTimerName('')
@@ -632,19 +675,24 @@ function App(): JSX.Element {
       return null
     }
 
-    return note.timers.map((timer) =>
-      timer.id === editingTimerId
-        ? {
-            ...timer,
-            name: timerName.trim() || '计时器',
-            quota: normalizeTimerQuota(timerQuota),
-            dueAt,
-            status: 'scheduled',
-            repeat: timerRepeat,
-            quickPreset: timerQuickPreset ?? undefined
-          }
-        : timer
-    )
+    const normalizedQuota = normalizeTimerQuota(timerQuota)
+
+    return note.timers.map((timer) => {
+      if (timer.id !== editingTimerId) {
+        return timer
+      }
+
+      return {
+        ...timer,
+        name: timerName.trim() || '计时器',
+        quota: normalizedQuota,
+        quotaResetValue: normalizedQuota && normalizedQuota !== '0' ? normalizedQuota : timer.quotaResetValue,
+        dueAt,
+        status: 'scheduled',
+        repeat: timerRepeat,
+        quickPreset: timerQuickPreset ?? undefined
+      }
+    })
   }
 
   function applyQuickTimerPreset(quickPreset: NoteTimerQuickPreset): void {
@@ -655,16 +703,34 @@ function App(): JSX.Element {
   }
 
   async function saveCardTimerQuota(note: NoteView, timerId: string, value: string): Promise<void> {
+    const normalizedQuota = normalizeTimerQuota(value)
     const nextTimers = note.timers.map((timer) =>
       timer.id === timerId
         ? {
             ...timer,
-            quota: normalizeTimerQuota(value)
+            quota: normalizedQuota,
+            quotaResetValue: normalizedQuota && normalizedQuota !== '0' ? normalizedQuota : timer.quotaResetValue
           }
         : timer
     )
     setEditingCardQuota(null)
     await saveNote(note, note.html, note.pinned, nextTimers, { keepDialogOpen: false })
+  }
+
+  async function setTimerCoreRole(note: NoteView, timerId: string): Promise<void> {
+    const nextTimers = note.timers.map((timer) => ({
+      ...timer,
+      isCore: timer.id === timerId
+    }))
+    await saveNote(note, note.html, note.pinned, nextTimers)
+  }
+
+  async function setTimerSortRole(note: NoteView, timerId: string): Promise<void> {
+    const nextTimers = note.timers.map((timer) => ({
+      ...timer,
+      isSort: timer.id === timerId
+    }))
+    await saveNote(note, note.html, note.pinned, nextTimers)
   }
 
   async function refreshCardTimer(note: NoteView, timerId: string): Promise<void> {
@@ -980,6 +1046,14 @@ function App(): JSX.Element {
 
   useEffect(() => {
     try {
+      window.localStorage.setItem(TIMER_SORT_DIRECTION_STORAGE_KEY, timerSortDirection)
+    } catch {
+      // Sorting preference is local UI state; storage failures should not block note use.
+    }
+  }, [timerSortDirection])
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem(REMINDER_HISTORY_STORAGE_KEY, JSON.stringify(reminderHistory))
     } catch {
       // Local reminder history is a convenience cache; storage failures should not block note use.
@@ -1021,6 +1095,20 @@ function App(): JSX.Element {
       try {
         const now = Date.now()
         const activeNotes = await getAllReminderNotes()
+        let refreshedQuota = false
+
+        for (const note of activeNotes) {
+          const { timers: refreshedTimers, changed } = refreshDueCoreTimerQuotas(note.timers, now)
+          if (changed) {
+            refreshedQuota = true
+            await saveNote(note, note.html, note.pinned, refreshedTimers, { keepDialogOpen: false })
+          }
+        }
+
+        if (refreshedQuota) {
+          await refreshWorkspace()
+          return
+        }
 
         const firedNote = activeNotes.find((note) => note.timers.some((timer) => timer.status === 'fired'))
         if (firedNote) {
@@ -1479,8 +1567,24 @@ function App(): JSX.Element {
             <div className="empty-state">正在加载便签</div>
           ) : searching ? (
             <div className="empty-state">正在搜索</div>
-          ) : visibleNotes.length > 0 ? (
-            visibleNotes.map((note) => (
+          ) : visibleNoteCount > 0 ? (
+            noteListRows.map((row) =>
+              row.kind === 'section' ? (
+                <div className="note-section-heading" key={row.id}>
+                  <strong>{row.title}</strong>
+                  <span>{row.count}</span>
+                  {row.id === 'workspace' ? (
+                    <select
+                      value={timerSortDirection}
+                      onChange={(event) => setTimerSortDirection(event.target.value as TimerSortDirection)}
+                      aria-label="工作区倒计时排序"
+                    >
+                      <option value="asc">近到远</option>
+                      <option value="desc">远到近</option>
+                    </select>
+                  ) : null}
+                </div>
+              ) : ((note) => (
               <article
                 className={[
                   'note-card',
@@ -1542,6 +1646,7 @@ function App(): JSX.Element {
                             className="timer-card-quota-input"
                             type="number"
                             min="0"
+                            step="1"
                             autoFocus
                             value={editingCardQuota.value}
                             onChange={(event) =>
@@ -1594,7 +1699,8 @@ function App(): JSX.Element {
                   <X size={13} />
                 </button>
               </article>
-            ))
+              ))(row.note)
+            )
           ) : (
           <div className="empty-state">{trimmedSearchQuery ? '没有匹配的便签' : '这个分组还没有便签'}</div>
           )}
@@ -1679,6 +1785,22 @@ function App(): JSX.Element {
                         <span>
                           {timer.quota ? `${timer.quota} · ` : ''}{formatTimerRemaining(resolveTimerDueAt(timer, timerNow), timerNow)} · {new Date(resolveTimerDueAt(timer, timerNow)).toLocaleString()}
                         </span>
+                        <div className="timer-role-actions" aria-label="计时器排序角色">
+                          <button
+                            type="button"
+                            className={timer.isCore ? 'timer-role-button active' : 'timer-role-button'}
+                            onClick={() => void setTimerCoreRole(selectedNote, timer.id)}
+                          >
+                            设为核心
+                          </button>
+                          <button
+                            type="button"
+                            className={timer.isSort ? 'timer-role-button active' : 'timer-role-button'}
+                            onClick={() => void setTimerSortRole(selectedNote, timer.id)}
+                          >
+                            设为排序
+                          </button>
+                        </div>
                       </div>
                       <div className="timer-item-actions">
                         <button type="button" onClick={() => startEditingTimer(timer)} aria-label="编辑计时器">
@@ -1704,12 +1826,13 @@ function App(): JSX.Element {
                   <input
                     type="number"
                     min="0"
+                    step="1"
                     value={timerQuota}
                     onChange={(event) => setTimerQuota(event.target.value)}
-                    placeholder="剩余额度"
-                    aria-label="剩余额度百分比"
+                    placeholder="额度"
+                    aria-label="数字额度"
                   />
-                  <span aria-hidden="true">%</span>
+                  <span aria-hidden="true">次</span>
                 </label>
                 <input
                   type="datetime-local"

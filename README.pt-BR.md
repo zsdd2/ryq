@@ -19,7 +19,7 @@ O app executavel atual inclui:
 - Edicao rica de notas e preview em cards
 - Modelos de tabela e modelos de gerenciamento de contas/assinaturas
 - Busca global em todos os grupos locais
-- Temporizadores por nota, atalhos de contagem regressiva, confirmacao de lembrete e edicao de cota
+- Temporizadores por nota, atalhos de contagem regressiva, confirmacao de lembrete, edicao numerica de cota, papeis de timer principal/ordenacao e separacao entre area de trabalho e espera
 - Ordenacao por arraste dentro de secoes fixadas e nao fixadas
 - Comportamento desktop focado na bandeja: a janela flutuante nao aparece na barra de tarefas, fecha para a bandeja e pode ser exibida, ocultada, atualizada ou encerrada pelo menu da bandeja
 - Preferencia opcional de iniciar com o Windows, desativada por padrao
@@ -99,8 +99,8 @@ A implementacao atual vive principalmente em:
 
 Veja [`ROADMAP.md`](./ROADMAP.md) para o plano detalhado.
 
-- Atual: notas flutuantes locais, persistencia SQLite agrupada, edicao rica, modelos, busca, temporizadores, lembretes, comportamento desktop focado na bandeja, preferencia de startup no Windows e atualizacoes empacotadas no Windows
-- Proximo: ordenacao automatica por contagem regressiva, preservando ordenacao manual como opcao
+- Atual: notas flutuantes locais, persistencia SQLite agrupada, edicao rica, modelos, busca, temporizadores, lembretes, ordenacao por area de trabalho/espera, comportamento desktop focado na bandeja, preferencia de startup no Windows e atualizacoes empacotadas no Windows
+- Proximo: validar a ordenacao de timers em smoke tests reais da UI e ajustar controles compactos se necessario
 - Futuro: temas, export/import e somente escopos de sync/app companheiro explicitamente aprovados
 
 ## Releases

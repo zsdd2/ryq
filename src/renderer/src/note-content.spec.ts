@@ -8,13 +8,16 @@ import {
   getCompactTimerName,
   getSummaryFromHtml,
   getTimerQuotaInputValue,
+  getTimerWorkspaceSections,
   acknowledgeFiredTimers,
   markDueTimersFired,
   normalizeTimerQuota,
+  refreshDueCoreTimerQuotas,
   refreshQuickTimer,
   resolveTimerDueAt,
   snoozeFiredTimers
 } from './note-content'
+import type { NoteTimer, NoteView } from './note-content'
 
 describe('note content helpers', () => {
   it('turns legacy cards into note views with wrapped html content', () => {
@@ -138,7 +141,8 @@ describe('note content helpers', () => {
     expect(note.timers[0]).toMatchObject({
       id: 'timer-1',
       name: 'First reminder',
-      quota: '20次',
+      quota: '20',
+      quotaResetValue: '20',
       status: 'scheduled'
     })
   })
@@ -157,12 +161,99 @@ describe('note content helpers', () => {
     expect(getCompactTimerName('API')).toBe('API')
   })
 
-  it('stores timer quota as a percentage while keeping the input numeric', () => {
-    expect(normalizeTimerQuota('30')).toBe('30%')
-    expect(normalizeTimerQuota('30%')).toBe('30%')
+  it('stores timer quota as digits only while accepting legacy quota text', () => {
+    expect(normalizeTimerQuota('30')).toBe('30')
+    expect(normalizeTimerQuota('30%')).toBe('30')
+    expect(normalizeTimerQuota('20次')).toBe('20')
     expect(normalizeTimerQuota('')).toBeUndefined()
     expect(getTimerQuotaInputValue('30%')).toBe('30')
     expect(getTimerQuotaInputValue('20次')).toBe('20')
+  })
+
+  it('splits notes into a sorted workspace and a waiting area by the selected timers', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+    const makeNote = (id: string, position: number, timers: NoteTimer[] = []) =>
+      ({
+        id,
+        columnId: 'column',
+        title: id,
+        description: id,
+        position,
+        createdAt: '2026-06-10T00:00:00.000Z',
+        updatedAt: '2026-06-10T00:00:00.000Z',
+        html: id,
+        pinned: false,
+        summary: id,
+        timers
+      }) as NoteView
+
+    const near = now + 30 * 60 * 1000
+    const far = now + 3 * 60 * 60 * 1000
+    const resetAt = now + 24 * 60 * 60 * 1000
+    const sections = getTimerWorkspaceSections(
+      [
+        makeNote('manual', 1),
+        makeNote('far', 2, [{ id: 'far-sort', name: 'sort', dueAt: far, status: 'scheduled', isSort: true }]),
+        makeNote('waiting', 3, [
+          {
+            id: 'waiting-core',
+            name: 'core',
+            quota: '0',
+            quotaResetValue: '7',
+            dueAt: resetAt,
+            status: 'scheduled',
+            repeat: 'weekly',
+            isCore: true
+          },
+          { id: 'waiting-sort', name: 'sort', dueAt: near, status: 'scheduled', isSort: true }
+        ]),
+        makeNote('near', 4, [{ id: 'near-sort', name: 'sort', dueAt: near, status: 'scheduled', isSort: true }])
+      ],
+      now,
+      'asc'
+    )
+
+    expect(sections.workspaceNotes.map((note) => note.id)).toEqual(['near', 'far', 'manual'])
+    expect(sections.waitingNotes.map((note) => note.id)).toEqual(['waiting'])
+    expect(getTimerWorkspaceSections(sections.workspaceNotes, now, 'desc').workspaceNotes.map((note) => note.id)).toEqual([
+      'manual',
+      'far',
+      'near'
+    ])
+  })
+
+  it('refreshes zero-quota core timers when their reset countdown reaches zero', () => {
+    const now = new Date('2026-06-10T08:00:00.000Z').getTime()
+    const yesterday = now - 24 * 60 * 60 * 1000
+
+    expect(
+      refreshDueCoreTimerQuotas(
+        [
+          {
+            id: 'core',
+            name: 'core',
+            quota: '0',
+            quotaResetValue: '7',
+            dueAt: yesterday,
+            status: 'scheduled',
+            repeat: 'weekly',
+            isCore: true
+          }
+        ],
+        now
+      )
+    ).toMatchObject({
+      changed: true,
+      timers: [
+        {
+          id: 'core',
+          quota: '7',
+          quotaResetValue: '7',
+          status: 'scheduled',
+          dueAt: new Date('2026-06-16T08:00:00.000Z').getTime()
+        }
+      ]
+    })
   })
 
   it('resolves recurring timers to their next visible due date', () => {

@@ -19,7 +19,7 @@ The current runnable app includes:
 - Rich note editing and card previews
 - Table templates and account-membership templates
 - Global search across all local groups
-- Per-note timers, quick countdown presets, reminder acknowledgement, snooze, reminder history, and timer quota editing
+- Per-note timers, quick countdown presets, reminder acknowledgement, snooze, reminder history, numeric timer quota editing, core/sort timer roles, and workspace/waiting-area sorting
 - Drag ordering within pinned and unpinned note sections
 - Tray-first desktop behavior: the floating window stays out of the taskbar, closes to the tray, and can be shown, hidden, updated, or quit from the tray menu
 - Optional Windows launch-on-login preference, disabled by default
@@ -118,8 +118,8 @@ The current app implementation lives mainly in:
 
 For the detailed roadmap, see [`ROADMAP.md`](./ROADMAP.md).
 
-- Current: local floating notes, grouped SQLite persistence, rich editing, templates, search, timers, reminders, tray-first desktop behavior, Windows startup preference, and packaged Windows update checks
-- Next: countdown-aware automatic sorting while preserving manual ordering as an option
+- Current: local floating notes, grouped SQLite persistence, rich editing, templates, search, timers, reminders, workspace/waiting-area timer sorting, tray-first desktop behavior, Windows startup preference, and packaged Windows update checks
+- Next: polish timer sorting through live UI smoke checks and add more compact role controls if needed
 - Future: themes, export/import, and only explicitly approved sync or companion-app scope
 
 ## Repository Documents

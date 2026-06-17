@@ -913,3 +913,41 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 1. Commit and push version `1.7.0`.
 2. Implement countdown-aware automatic sorting as the next feature, with manual sorting preserved as an option.
 3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Timer Workspace Sorting
+
+- Split the active group note list into an upper `工作区` and lower `等待区`.
+- Let a note's timers define one core timer and one sorting timer.
+- Move notes whose core timer quota is `0` into the waiting area until that core timer reaches its reset time.
+- When a zero-quota core timer reaches its reset time, automatically restore its numeric quota from the stored reset value and roll the timer to the next repeat/quick-preset due time.
+- Sort the workspace by the selected sorting timer from near-to-far or far-to-near.
+- Store timer quotas as digits only.
+- Advance feature metadata to `1.8.0` for the next release push.
+
+## Current Status
+
+- Implemented and verified locally.
+- Added pure rule coverage for numeric quota normalization, workspace/waiting split, near/far sorting, and automatic zero-quota core timer refresh.
+- Added UI source regression coverage for the workspace/waiting sections, sorting control, core/sort role buttons, and automatic refresh helper.
+- Added `isCore`, `isSort`, and `quotaResetValue` timer metadata inside the existing note JSON payload, preserving the SQLite schema.
+- Added `工作区` / `等待区` section headers and a workspace sort direction selector.
+- Added timer detail actions for `设为核心` and `设为排序`.
+- Updated quota editing so new values are numeric-only; positive values also become the future reset value, while `0` preserves the previous reset value.
+- Advanced `package.json` and `package-lock.json` to `1.8.0`.
+- Verification passed so far:
+  - `npm test -- src/renderer/src/note-content.spec.ts`
+  - `npm test -- src/renderer/src/note-content.spec.ts src/renderer/src/app-layout.spec.ts`
+  - `npm run typecheck`
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `npm test` passed: 11 test files, 51 tests.
+  - `npm run smoke:electron`
+  - `npm run site:build`
+  - `npm audit --omit=dev` reports 0 vulnerabilities.
+  - `git diff --check`
+  - `C:\Users\Administrator\AppData\Local\codegraph\current\bin\codegraph.cmd sync` completed; final run reported `Already up to date`.
+
+## Future Modification Plan
+
+1. Commit and push version `1.8.0`.
+2. Add live UI smoke coverage for selecting core/sort timers and waiting-area movement if the current smoke harness remains stable.
+3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.

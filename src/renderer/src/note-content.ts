@@ -58,15 +58,19 @@ interface StoredNoteDescription {
 export type NoteTimerRepeat = 'none' | 'daily' | 'weekly' | 'monthly'
 export type NoteTimerQuickPreset = 'monthly' | 'weekly' | 'five-hour'
 export type NoteTimerStatus = 'scheduled' | 'fired' | 'done'
+export type TimerSortDirection = 'asc' | 'desc'
 
 export interface NoteTimer {
   id: string
   name: string
   quota?: string
+  quotaResetValue?: string
   dueAt: number
   status: NoteTimerStatus
   repeat?: NoteTimerRepeat
   quickPreset?: NoteTimerQuickPreset
+  isCore?: boolean
+  isSort?: boolean
 }
 
 export interface NoteView extends CardRecord {
@@ -359,13 +363,137 @@ export function formatTimerRemaining(dueAt: number, now = Date.now()): string {
 }
 
 export function normalizeTimerQuota(value: string): string | undefined {
-  const normalized = value.trim().replace(/%+$/, '').trim()
-  return normalized ? `${normalized}%` : undefined
+  const normalized = value.match(/\d+/)?.[0]
+  return normalized ? String(Number(normalized)) : undefined
 }
 
 export function getTimerQuotaInputValue(value: string | undefined): string {
   const numericValue = value?.match(/\d+(?:\.\d+)?/)?.[0]
   return numericValue ?? ''
+}
+
+function getTimerQuotaNumber(timer: NoteTimer): number | null {
+  const value = getTimerQuotaInputValue(timer.quota)
+  if (!value) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function getCoreTimer(note: NoteView): NoteTimer | null {
+  return note.timers.find((timer) => timer.isCore && timer.status !== 'done') ?? null
+}
+
+function getSortTimer(note: NoteView): NoteTimer | null {
+  return (
+    note.timers.find((timer) => timer.isSort && timer.status !== 'done') ??
+    getCoreTimer(note) ??
+    note.timers.find((timer) => timer.status !== 'done') ??
+    null
+  )
+}
+
+function isWaitingNote(note: NoteView, now: number): boolean {
+  const coreTimer = getCoreTimer(note)
+  if (!coreTimer || getTimerQuotaNumber(coreTimer) !== 0) {
+    return false
+  }
+
+  return coreTimer.dueAt > now
+}
+
+function compareNotesBySelectedTimer(left: NoteView, right: NoteView, now: number, direction: TimerSortDirection): number {
+  if (left.pinned !== right.pinned) {
+    return left.pinned ? -1 : 1
+  }
+
+  const leftTimer = getSortTimer(left)
+  const rightTimer = getSortTimer(right)
+
+  if (leftTimer && !rightTimer) {
+    return direction === 'asc' ? -1 : 1
+  }
+
+  if (!leftTimer && rightTimer) {
+    return direction === 'asc' ? 1 : -1
+  }
+
+  if (leftTimer && rightTimer) {
+    const leftDueAt = resolveTimerDueAt(leftTimer, now)
+    const rightDueAt = resolveTimerDueAt(rightTimer, now)
+    if (leftDueAt !== rightDueAt) {
+      return direction === 'asc' ? leftDueAt - rightDueAt : rightDueAt - leftDueAt
+    }
+  }
+
+  return left.position - right.position
+}
+
+export function getTimerWorkspaceSections(
+  notes: NoteView[],
+  now = Date.now(),
+  direction: TimerSortDirection = 'asc'
+): { workspaceNotes: NoteView[]; waitingNotes: NoteView[] } {
+  const workspaceNotes: NoteView[] = []
+  const waitingNotes: NoteView[] = []
+
+  for (const note of notes) {
+    if (isWaitingNote(note, now)) {
+      waitingNotes.push(note)
+    } else {
+      workspaceNotes.push(note)
+    }
+  }
+
+  return {
+    workspaceNotes: [...workspaceNotes].sort((left, right) => compareNotesBySelectedTimer(left, right, now, direction)),
+    waitingNotes: [...waitingNotes].sort((left, right) => left.position - right.position)
+  }
+}
+
+export function refreshDueCoreTimerQuotas(
+  timers: NoteTimer[],
+  now = Date.now()
+): { timers: NoteTimer[]; changed: boolean } {
+  let changed = false
+  const nextTimers = timers.map((timer) => {
+    if (!timer.isCore || getTimerQuotaNumber(timer) !== 0 || timer.dueAt > now) {
+      return timer
+    }
+
+    const resetValue = normalizeTimerQuota(timer.quotaResetValue ?? '')
+    if (!resetValue) {
+      return timer
+    }
+
+    const refreshedTimer =
+      refreshQuickTimer(timer, now) ??
+      ((timer.repeat ?? 'none') !== 'none'
+        ? {
+            ...timer,
+            dueAt: resolveTimerDueAt(timer, now),
+            status: 'scheduled' as const
+          }
+        : null)
+
+    if (!refreshedTimer) {
+      return timer
+    }
+
+    changed = true
+    return {
+      ...refreshedTimer,
+      quota: resetValue,
+      quotaResetValue: resetValue
+    }
+  })
+
+  return {
+    timers: nextTimers,
+    changed
+  }
 }
 
 export function buildNoteDescription({ html, pinned }: { html: string; pinned: boolean }): string {
@@ -428,13 +556,21 @@ function normalizeTimers(value: unknown): NoteTimer[] {
     .map((timer) => ({
       id: typeof timer.id === 'string' ? timer.id : crypto.randomUUID(),
       name: typeof timer.name === 'string' && timer.name.trim() ? timer.name.trim() : '计时器',
-      quota: typeof timer.quota === 'string' && timer.quota.trim() ? timer.quota.trim() : undefined,
+      quota: typeof timer.quota === 'string' && timer.quota.trim() ? normalizeTimerQuota(timer.quota) : undefined,
+      quotaResetValue:
+        typeof timer.quotaResetValue === 'string' && timer.quotaResetValue.trim()
+          ? normalizeTimerQuota(timer.quotaResetValue)
+          : typeof timer.quota === 'string' && timer.quota.trim()
+            ? normalizeTimerQuota(timer.quota)
+            : undefined,
       dueAt: typeof timer.dueAt === 'number' ? timer.dueAt : Date.now(),
       status: timer.status === 'fired' || timer.status === 'done' ? timer.status : 'scheduled',
       repeat:
         timer.repeat === 'daily' || timer.repeat === 'weekly' || timer.repeat === 'monthly'
           ? timer.repeat
           : 'none',
-      quickPreset: isQuickPreset(timer.quickPreset) ? timer.quickPreset : undefined
+      quickPreset: isQuickPreset(timer.quickPreset) ? timer.quickPreset : undefined,
+      isCore: timer.isCore === true,
+      isSort: timer.isSort === true
     }))
 }

@@ -39,4 +39,16 @@ describe('compact application layout', () => {
     expect(styles).toContain('min-height: 34px')
     expect(styles).toContain('padding: 0')
   })
+
+  it('shows timer-based workspace and waiting sections with sort controls', () => {
+    expect(appSource).toContain('getTimerWorkspaceSections')
+    expect(appSource).toContain('timerSortDirection')
+    expect(appSource).toContain('工作区')
+    expect(appSource).toContain('等待区')
+    expect(appSource).toContain('设为核心')
+    expect(appSource).toContain('设为排序')
+    expect(appSource).toContain('refreshDueCoreTimerQuotas')
+    expect(styles).toContain('.note-section-heading')
+    expect(styles).toContain('.timer-role-actions')
+  })
 })
