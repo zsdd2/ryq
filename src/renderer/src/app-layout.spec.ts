@@ -63,4 +63,10 @@ describe('compact application layout', () => {
     expect(styles).toContain('min-height: 51px')
     expect(styles).not.toContain('.note-inline-timer')
   })
+
+  it('keeps compact timer role labels on one horizontal line', () => {
+    const roleButtonStyles = styles.match(/\.timer-role-button\s*\{[^}]+\}/)?.[0] ?? ''
+
+    expect(roleButtonStyles).toContain('white-space: nowrap')
+  })
 })

@@ -984,3 +984,27 @@ $env:LOCALAPPDATA = (Join-Path $root '.localappdata')
 1. Commit and push version `1.8.1`.
 2. Add live UI smoke coverage for selecting core/sort timers and waiting-area movement if the current smoke harness remains stable.
 3. Keep sync, accounts, OAuth, provider APIs, and multi-device behavior out of scope unless a new product decision explicitly restores them.
+
+## Current Modification Goal - Timer Role Button Wrapping Fix
+
+- Keep compact `核心` / `排序` timer role labels on one horizontal line in the note editor.
+- Advance patch metadata to `1.8.2` for the next desktop release push.
+
+## Current Status
+
+- Implemented and verified locally.
+- Added a focused layout test that checks `.timer-role-button` directly prevents wrapping.
+- Added `white-space: nowrap` and a small minimum width to the timer role button style.
+- Advanced `package.json` and `package-lock.json` to `1.8.2`.
+- Verification passed:
+  - `npm test -- src/renderer/src/app-layout.spec.ts`
+  - `npm test`
+  - `npm install --package-lock-only --ignore-scripts` reports 0 vulnerabilities.
+  - `git diff --check`
+  - `codegraph sync` reports already up to date.
+
+## Future Modification Plan
+
+1. Commit and push version `1.8.2`.
+2. Confirm the release workflow and `v1.8.2` tag after push.
+3. Keep future timer editor polish focused on compact controls unless the editor layout is redesigned.

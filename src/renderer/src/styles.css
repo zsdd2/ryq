@@ -1310,12 +1310,14 @@ button:disabled {
 
 .timer-role-button {
   height: 22px;
+  min-width: 34px;
   border-radius: 7px;
   background: rgb(236 243 255);
   padding: 0 7px;
   color: var(--blue);
   font-size: 10px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .timer-role-button.active {
